@@ -1,0 +1,22 @@
+0.1.5 - released 2006-07-22
+- added doxygen documentation for public api
+- added h264_new and h264_free functions
+- read_nal_unit detects end of nal correctly
+- read_nal_unit and write_nal_unit now return actual length read/written
+- added defines for nal unit types
+- added readme and changes files
+- fixed emulation_prevention_three_byte handling in write_nal_unit
+- fixed bugs in read/write_rbsp_trailing_bits
+
+0.1.4 - released 2005-10-19
+- moved bs.{c,h} into separate files
+- header include more than once is ok
+- changed some notices
+- update manifest and makefile
+- print usage
+- minor fixes
+
+0.1.3 - released 2005-10-12
+- first public release
+- status: implements ALL of H264 standard, except for: SEI (7.3.2.3), slice data partitions (7.3.2.9), slice data, and a few other parts described in the code. Partly implements decoded reference picture marking and reference picture list reordering (data is read but discarded; cannot write). No consistency or range checks.
+
