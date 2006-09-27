@@ -27,10 +27,10 @@
 
 void     bs_init(bs_t* b, uint8_t* buf, int size)
 {
-	b->start = buf;
-	b->p = buf;
-	b->end = buf + size;
-	b->bits_left = 8;
+    b->start = buf;
+    b->p = buf;
+    b->end = buf + size;
+    b->bits_left = 8;
 }
 
 uint32_t bs_byte_aligned(bs_t* b) { if (b->bits_left == 8) { return 1; } else { return 0; } }
@@ -41,26 +41,26 @@ int bs_pos(bs_t* b) { return (b->p - b->start); }
 
 uint32_t bs_read_u1(bs_t* b)
 {
-	uint32_t r = 0;
-	if (bs_eof(b)) { return 0; }
-	
-	b->bits_left--;
-	r = ((*(b->p)) >> b->bits_left) & 0x01;
+    uint32_t r = 0;
+    if (bs_eof(b)) { return 0; }
+    
+    b->bits_left--;
+    r = ((*(b->p)) >> b->bits_left) & 0x01;
 
-	if (b->bits_left == 0) { b->p ++; b->bits_left = 8; }
+    if (b->bits_left == 0) { b->p ++; b->bits_left = 8; }
 
-	return r;
+    return r;
 }
 
 uint32_t bs_read_u(bs_t* b, int n)
 {
-	uint32_t r = 0;
-	int i;
-	for (i = 0; i < n; i++)
-	{
-		r |= ( bs_read_u1(b) << ( n - i - 1 ) );
-	}
-	return r;
+    uint32_t r = 0;
+    int i;
+    for (i = 0; i < n; i++)
+    {
+        r |= ( bs_read_u1(b) << ( n - i - 1 ) );
+    }
+    return r;
 }
 
 uint32_t bs_read_f(bs_t* b, int n) { return bs_read_u(b, n); }
@@ -69,50 +69,51 @@ uint32_t bs_read_u8(bs_t* b) { return bs_read_u(b, 8); }
 
 uint32_t bs_read_ue(bs_t* b)
 {
-	int32_t r = 0;
-	int i = 0;
+    int32_t r = 0;
+    int i = 0;
 
     while( bs_read_u1(b) == 0 && i < 32 && !bs_eof(b) )
     {
         i++;
     }
-	r = bs_read_u(b, i);
-	r += (1 << i) - 1;
-	return r;
+    r = bs_read_u(b, i);
+    r += (1 << i) - 1;
+    return r;
 }
 
 int32_t bs_read_se(bs_t* b) 
 {
-	int32_t r = bs_read_ue(b);
-	if (r & 0x01)
-	{
-		r = (r+1)/2;
-	}
-	else
-	{
-		r = -(r/2);
-	}
-	return r;
+    int32_t r = bs_read_ue(b);
+    if (r & 0x01)
+    {
+        r = (r+1)/2;
+    }
+    else
+    {
+        r = -(r/2);
+    }
+    return r;
 }
 
 
 void bs_write_u1(bs_t* b, uint32_t v)
 {
-	if (bs_eof(b)) { return; }
-	
-	b->bits_left--;
-	(*(b->p)) |= ((v & 0x01) << b->bits_left);
+    if (bs_eof(b)) { return; }
+    
+    b->bits_left--;
+    (*(b->p)) &= ~(0x01 << b->bits_left);
+    (*(b->p)) |= ((v & 0x01) << b->bits_left);
 
-	if (b->bits_left == 0) { b->p ++; b->bits_left = 8; }
+    if (b->bits_left == 0) { b->p ++; b->bits_left = 8; }
 }
 
 void bs_write_u(bs_t* b, int n, uint32_t v)
 {
-	int i;
-	for (i = 0; i < n; i++)
-	{
-		bs_write_u1(b, (v >> ( n - i - 1 ))&0x01 );
-	}
+    int i;
+    for (i = 0; i < n; i++)
+    {
+        bs_write_u1(b, (v >> ( n - i - 1 ))&0x01 );
+    }
 }
 
 void bs_write_f(bs_t* b, int n, uint32_t v) { bs_write_u(b, n, v); }
@@ -124,25 +125,25 @@ void bs_write_ue(bs_t* b, uint32_t v)
     static const int len_table[256] =
     {
         1,
-		1,
-		2,2,
-		3,3,3,3,
-		4,4,4,4,4,4,4,4,
-		5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
+        1,
+        2,2,
+        3,3,3,3,
+        4,4,4,4,4,4,4,4,
+        5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
         6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
-		6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
+        6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
         7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
-		7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
         7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
-		7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+        7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+        7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
         8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
-		8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
         8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
-		8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
         8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
-		8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
         8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
-		8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+        8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+        8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+        8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+        8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
     };
 
     int len;
@@ -153,12 +154,12 @@ void bs_write_ue(bs_t* b, uint32_t v)
     }
     else
     {
-		v++;
+        v++;
 
-		if (v >= 0x01000000)
-		{
-			len = 24 + len_table[ v >> 24 ];
-		}
+        if (v >= 0x01000000)
+        {
+            len = 24 + len_table[ v >> 24 ];
+        }
         else if(v >= 0x00010000)
         {
             len = 16 + len_table[ v >> 16 ];
@@ -178,13 +179,13 @@ void bs_write_ue(bs_t* b, uint32_t v)
 
 void bs_write_se(bs_t* b, int32_t v)
 {
-	if (v <= 0)
-	{
-		bs_write_ue(b, -v*2);
-	}
-	else
-	{
-		bs_write_ue(b, v*2 - 1);
-	}
+    if (v <= 0)
+    {
+        bs_write_ue(b, -v*2);
+    }
+    else
+    {
+        bs_write_ue(b, v*2 - 1);
+    }
 }
 
