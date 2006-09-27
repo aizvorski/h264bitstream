@@ -24,9 +24,9 @@ debug_nal(h);
 
 The main design goal is provide a complete, fully standards-compliant open-source library for reading and writing H264 bitstreams.
 
-Reading and writing headers (sequence and picture parameter sets, slice headers, etc) is higher priority than reading and writing actual encoded picture data, and will be implemented first.
+Reading and writing headers (sequence and picture parameter sets, slice headers, etc) is higher priority than reading and writing actual encoded picture data, and has been implemented first.
 
-Secondary goals are portability and a simple, clean API.  The library aims to use a subset of the language features of the C99 standard, without any compiler-specific extensions or dependence on a particular operating system or hardware.
+Secondary goals are portability and a simple, clean API.  The library uses a subset of the language features of the C99 standard, without any compiler-specific extensions or dependence on a particular operating system or hardware.
 
 _This library is not an encoder or decoder_, although you could use it to make writing an encoder or decoder much easier.  It understands the _syntax_ of H264, but not the semantics (meaning) of the data it reads or writes.
 
@@ -41,9 +41,9 @@ Everything in the H264 standard is implemented except for:
 - slice data
 - slice data partitioning
 
-Most of the unimplemented data will be skipped when reading and ignored while writing; the code to read/write them is present as a stub, but they require somewhat more complex data structures to store the data, and those are not implemented yet.
+Most of the unimplemented data will be skipped when reading and ignored while writing; the code to read/write it is present as a stub, but they require somewhat more complex data structures to store the data, and those are not implemented yet.
 
-Reading and writing slice data is complex and will probably not be implemented soon (target: 1.0.0 version).
+Reading and writing slice data is complex and may not be fully implemented soon (target: 1.0.0 version), although there is some work-in-progress code for it.
 
 Slice data partitioning will not be implemented in the forseeable future.  It would require extensive changes to the library, and as it is only available in Extended Profile, its utility is limited.
 
@@ -56,7 +56,7 @@ A copy of the standard can be obtained from ITU (at http://www.itu.int/rec/T-REC
 
 The public API documentation can be generated using Doxygen (run "make dox", the results are in the dox/ subdirectory).
 
-The public API at this time consists of:
+The public API consists of:
 
     h264_new
     h264_free
@@ -67,7 +67,7 @@ The public API at this time consists of:
 
 plus direct access to the fields of h264_stream_t and the data structures nested in that.
 
-Using other functions contained in the library to directly read or write specific types of nals or parts thereof is not part of the public API, although it is not hard to do if you prepare the required bs_t argument.  Please also note that such use would result in incorrect streams unless you also handle RBSP to SODB translation.  A public interface for that may be available in a later version.
+Using other functions contained in the library to directly read or write specific types of nals or parts thereof is not part of the public API, although it is not hard to do if you prepare the required bs_t argument.  Please also note that such use would result in incorrect streams unless you also handle RBSP to SODB translation.  A public interface for that translation may be available in a later version.
 
 
 == Programming Notes ==
