@@ -39,11 +39,11 @@
  */
 h264_stream_t* h264_new()
 {
-	h264_stream_t* h = (h264_stream_t*)malloc(sizeof(h264_stream_t));
-	h->nal = (nal_t*)malloc(sizeof(nal_t));
-	h->sps = (sps_t*)malloc(sizeof(sps_t));
-	h->pps = (pps_t*)malloc(sizeof(pps_t));
-	h->sh = (slice_header_t*)malloc(sizeof(slice_header_t));
+    h264_stream_t* h = (h264_stream_t*)malloc(sizeof(h264_stream_t));
+    h->nal = (nal_t*)malloc(sizeof(nal_t));
+    h->sps = (sps_t*)malloc(sizeof(sps_t));
+    h->pps = (pps_t*)malloc(sizeof(pps_t));
+    h->sh = (slice_header_t*)malloc(sizeof(slice_header_t));
     return h;
 }
 
@@ -111,9 +111,9 @@ int find_nal_unit(uint8_t* buf, int size, int* nal_start, int* nal_end)
 }
 
 
-int more_rbsp_data(h264_stream_t* h, bs_t* b) { return !bs_eof(b); };
+int more_rbsp_data(h264_stream_t* h, bs_t* b) { return !bs_eof(b); }
 
-uint32_t next_bits(bs_t* b, int n) { return 0; }; // FIXME UNIMPLEMENTED
+uint32_t next_bits(bs_t* b, int n) { return 0; } // FIXME UNIMPLEMENTED
 
 
 /**
@@ -565,7 +565,7 @@ void read_filler_data_rbsp(h264_stream_t* h, bs_t* b)
     int ff_byte; //FIXME
     while( next_bits(b, 8) == 0xFF )
     {
-        ff_byte = bs_read_f(b,8);  /* equal to 0xFF */ 
+        ff_byte = bs_read_f(b,8);  // equal to 0xFF
     }
     read_rbsp_trailing_bits(h, b);
 }
@@ -626,7 +626,7 @@ void read_rbsp_slice_trailing_bits(h264_stream_t* h, bs_t* b)
     {
         while( more_rbsp_trailing_data(h, b) )
         {
-            cabac_zero_word = bs_read_f(b,16); /* equal to 0x0000 */ 
+            cabac_zero_word = bs_read_f(b,16); // equal to 0x0000
         }
     }
 }
@@ -638,10 +638,10 @@ void read_rbsp_trailing_bits(h264_stream_t* h, bs_t* b)
     int rbsp_alignment_zero_bit;
     if( !bs_byte_aligned(b) )
     {
-        rbsp_stop_one_bit = bs_read_f(b,1); /* equal to 1 */
+        rbsp_stop_one_bit = bs_read_f(b,1); // equal to 1
         while( !bs_byte_aligned(b) )
         {
-            rbsp_alignment_zero_bit = bs_read_f(b,1); /* equal to 0 */ 
+            rbsp_alignment_zero_bit = bs_read_f(b,1); // equal to 0
         }
     }
 }
@@ -909,7 +909,7 @@ slice_data( )
     moreDataFlag = 1;
     prevMbSkipped = 0;
     do {
-        if( sh->slice_type != SH_SLICE_TYPE_I && ssh->lice_type != SH_SLICE_TYPE_SI )
+        if( sh->slice_type != SH_SLICE_TYPE_I && sh->slice_type != SH_SLICE_TYPE_SI )
             if( !pps->entropy_coding_mode_flag ) {
                 mb_skip_run = bs_read_ue(b);
                 prevMbSkipped = ( mb_skip_run > 0 );
@@ -984,7 +984,7 @@ int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
     bs_write_u(b,2, nal->nal_ref_idc);
     bs_write_u(b,5, nal->nal_unit_type);
 
-    uint8_t* rbsp_buf = (uint8_t*)malloc(size); // NOTE this may have to be slightly larger (4/3 larger, worst case)
+    uint8_t* rbsp_buf = (uint8_t*)malloc(size); // NOTE this may have to be slightly smaller (4/3 smaller, worst case) in order to be guaranteed to fit
     int rbsp_size = 0;
     int write_size = 0;
     int i, j;
@@ -1026,17 +1026,17 @@ int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
             buf[ i+1 ] = rbsp_buf[ j+1 ];
             buf[ i+2 ] = 0x03;  // emulation_prevention_three_byte equal to 0x03
             buf[ i+3 ] = rbsp_buf[ j+2 ];
-            i += 3; j += 2;
+            i += 4; j += 3;
         }
         else if ( j == rbsp_size - 1 && 
                   rbsp_buf[ j ] == 0x00 )
         {
-            buf[i] == 0x03; // emulation_prevention_three_byte equal to 0x03 in trailing position
+            buf[ i ] == 0x03; // emulation_prevention_three_byte equal to 0x03 in trailing position
             i += 1;
         }
         else
         {
-            buf[i] = rbsp_buf[ j ];
+            buf[ i ] = rbsp_buf[ j ];
             i += 1; j+= 1;
         }
     }
@@ -1419,7 +1419,7 @@ void write_filler_data_rbsp(h264_stream_t* h, bs_t* b)
     int ff_byte; //FIXME
     while( next_bits(b, 8) == 0xFF )
     {
-        bs_write_f(b,8, ff_byte);  /* equal to 0xFF */ 
+        bs_write_f(b,8, ff_byte);  // equal to 0xFF
     }
     write_rbsp_trailing_bits(h, b);
 }
@@ -1471,10 +1471,14 @@ void write_rbsp_slice_trailing_bits(h264_stream_t* h, bs_t* b)
     int cabac_zero_word;
     if( h->pps->entropy_coding_mode_flag )
     {
-        while( more_rbsp_trailing_data(h, b) ) // FIXME when should we write cabac_zero_word ?
+        /*
+        // 9.3.4.6 Byte stuffing process (informative)
+        // NOTE do not write any cabac_zero_word for now - this appears to be optional
+        while( more_rbsp_trailing_data(h, b) )
         {
-            bs_write_f(b,16, cabac_zero_word); /* equal to 0x0000 */ 
+            bs_write_f(b,16, cabac_zero_word); // equal to 0x0000
         }
+        */
     }
 }
 
@@ -1485,10 +1489,10 @@ void write_rbsp_trailing_bits(h264_stream_t* h, bs_t* b)
     int rbsp_alignment_zero_bit = 0;
     if( !bs_byte_aligned(b) )
     {
-        bs_write_f(b,1, rbsp_stop_one_bit); /* equal to 1 */
+        bs_write_f(b,1, rbsp_stop_one_bit); // equal to 1
         while( !bs_byte_aligned(b) )
         {
-            bs_write_f(b,1, rbsp_alignment_zero_bit); /* equal to 0 */ 
+            bs_write_f(b,1, rbsp_alignment_zero_bit); // equal to 0
         }
     }
 }
@@ -1615,9 +1619,13 @@ void write_ref_pic_list_reordering(h264_stream_t* h, bs_t* b)
                 bs_write_ue(b, sh->rplr.reordering_of_pic_nums_idc);
                 if( sh->rplr.reordering_of_pic_nums_idc == 0 ||
                     sh->rplr.reordering_of_pic_nums_idc == 1 )
+                {
                     bs_write_ue(b, sh->rplr.abs_diff_pic_num_minus1);
+                }
                 else if( sh->rplr.reordering_of_pic_nums_idc == 2 )
+                {
                     bs_write_ue(b, sh->rplr.long_term_pic_num);
+                }
             } while( sh->rplr.reordering_of_pic_nums_idc != 3 );
         }
     }
@@ -1928,7 +1936,7 @@ void debug_slice_header(slice_header_t* sh)
 {
     printf("======= Slice Header =======\n");
     printf(" first_mb_in_slice : %02x \n", sh->first_mb_in_slice );
-    char* slice_type_name;
+    const char* slice_type_name;
     if (sh->slice_type == SH_SLICE_TYPE_I) { slice_type_name = "I Frame"; }
     else if (sh->slice_type == SH_SLICE_TYPE_P) { slice_type_name = "P Frame"; }
     else if (sh->slice_type == SH_SLICE_TYPE_B) { slice_type_name = "B Frame"; }
