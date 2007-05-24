@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     uint8_t* p = buf;
 
     int nal_start, nal_end;
-        
+
     while ((rsz = read(fd, buf + sz, BUFSIZE - sz)))
     {
         sz += rsz;
@@ -69,6 +69,17 @@ int main(int argc, char *argv[])
             debug_nal(h, h->nal);
             p += (nal_end - nal_start);
             sz -= nal_end;
+        }
+
+        // if no NALs found in buffer, discard it
+        if (p == buf) 
+        {
+            printf("!! Did not find any NALs between offset 0x%04X (%d) and 0x%04X (%d), discarding \n", 
+                   off, off, 
+                   off + sz, off + sz);
+
+            p = buf + sz;
+            sz = 0;
         }
 
         memmove(buf, p, sz);
