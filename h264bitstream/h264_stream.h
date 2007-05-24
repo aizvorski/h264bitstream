@@ -1,6 +1,6 @@
 /* 
  * h264bitstream - a library for reading and writing H.264 video
- * Copyright (C) 2005-2006 Auroras Entertainment, LLC
+ * Copyright (C) 2005-2007 Auroras Entertainment, LLC
  * 
  * Written by Alex Izvorski <aizvorski@gmail.com>
  * 
@@ -25,6 +25,8 @@
 #define _H264_STREAM_H        1
 
 #include "bs.h"
+
+#include "h264_sei.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -179,9 +181,9 @@ typedef struct
 /**
   Slice Header
   @see 7.3.3 Slice header syntax
-  @see read_slice_header
-  @see write_slice_header
-  @see debug_slice_header
+  @see read_slice_header_rbsp
+  @see write_slice_header_rbsp
+  @see debug_slice_header_rbsp
 */
 typedef struct
 {
@@ -253,6 +255,18 @@ typedef struct
 
 
 /**
+   Access unit delimiter
+   @see 7.3.1 NAL unit syntax
+   @see read_nal_unit
+   @see write_nal_unit
+   @see debug_nal
+*/
+typedef struct
+{
+    int primary_pic_type;
+} aud_t;
+
+/**
    Network Abstraction Layer (NAL) unit
    @see 7.3.1 NAL unit syntax
    @see read_nal_unit
@@ -281,6 +295,10 @@ typedef struct
     nal_t* nal;
     sps_t* sps;
     pps_t* pps;
+    aud_t* aud;
+    sei_t* sei;
+    sei_t** seis;
+    int num_seis;
     slice_header_t* sh;
 } h264_stream_t;
 
@@ -289,42 +307,52 @@ void h264_free(h264_stream_t* h);
 
 int find_nal_unit(uint8_t* buf, int size, int* nal_start, int* nal_end);
 
+void rbsp_to_nal(uint8_t* rbsp_buf, int* rbsp_size, uint8_t* nal_buf, int* nal_size);
+void nal_to_rbsp(uint8_t* nal_buf, int* nal_size, uint8_t* rbsp_buf, int* rbsp_size);
+
 int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size);
-
-void read_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b);
-
-void read_access_unit_delimiter_rbsp(h264_stream_t* h, bs_t* b);
-void read_end_of_seq_rbsp(h264_stream_t* h, bs_t* b);
-void read_end_of_stream_rbsp(h264_stream_t* h, bs_t* b);
-void read_filler_data_rbsp(h264_stream_t* h, bs_t* b);
-void read_slice_layer_rbsp(h264_stream_t* h, bs_t* b);
-void read_rbsp_slice_trailing_bits(h264_stream_t* h, bs_t* b);
-
-void read_rbsp_trailing_bits(h264_stream_t* h, bs_t* b);
-
-void read_slice_header(h264_stream_t* h, bs_t* b);
-void read_ref_pic_list_reordering(h264_stream_t* h, bs_t* b);
-void read_pred_weight_table(h264_stream_t* h, bs_t* b);
-void read_dec_ref_pic_marking(h264_stream_t* h, bs_t* b);
 
 void read_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b);
 void read_scaling_list(bs_t* b, int* scalingList, int sizeOfScalingList, int useDefaultScalingMatrixFlag );
 void read_vui_parameters(h264_stream_t* h, bs_t* b);
 void read_hrd_parameters(h264_stream_t* h, bs_t* b);
 
+void read_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b);
+
+void read_sei_rbsp(h264_stream_t* h, bs_t* b);
+void read_sei_message(h264_stream_t* h, bs_t* b);
+void read_access_unit_delimiter_rbsp(h264_stream_t* h, bs_t* b);
+void read_end_of_seq_rbsp(h264_stream_t* h, bs_t* b);
+void read_end_of_stream_rbsp(h264_stream_t* h, bs_t* b);
+void read_filler_data_rbsp(h264_stream_t* h, bs_t* b);
+
+void read_slice_layer_rbsp(h264_stream_t* h, bs_t* b);
+void read_rbsp_slice_trailing_bits(h264_stream_t* h, bs_t* b);
+void read_rbsp_trailing_bits(h264_stream_t* h, bs_t* b);
+void read_slice_header(h264_stream_t* h, bs_t* b);
+void read_ref_pic_list_reordering(h264_stream_t* h, bs_t* b);
+void read_pred_weight_table(h264_stream_t* h, bs_t* b);
+void read_dec_ref_pic_marking(h264_stream_t* h, bs_t* b);
+
 int more_rbsp_trailing_data(h264_stream_t* h, bs_t* b);
 
 
 int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size);
+
 void write_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b);
 void write_scaling_list(bs_t* b, int* scalingList, int sizeOfScalingList, int useDefaultScalingMatrixFlag );
 void write_vui_parameters(h264_stream_t* h, bs_t* b);
 void write_hrd_parameters(h264_stream_t* h, bs_t* b);
+
 void write_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b);
+
+void write_sei_rbsp(h264_stream_t* h, bs_t* b);
+void write_sei_message(h264_stream_t* h, bs_t* b);
 void write_access_unit_delimiter_rbsp(h264_stream_t* h, bs_t* b);
 void write_end_of_seq_rbsp(h264_stream_t* h, bs_t* b);
 void write_end_of_stream_rbsp(h264_stream_t* h, bs_t* b);
 void write_filler_data_rbsp(h264_stream_t* h, bs_t* b);
+
 void write_slice_layer_rbsp(h264_stream_t* h, bs_t* b);
 void write_rbsp_slice_trailing_bits(h264_stream_t* h, bs_t* b);
 void write_rbsp_trailing_bits(h264_stream_t* h, bs_t* b);
@@ -333,7 +361,6 @@ void write_ref_pic_list_reordering(h264_stream_t* h, bs_t* b);
 void write_pred_weight_table(h264_stream_t* h, bs_t* b);
 void write_dec_ref_pic_marking(h264_stream_t* h, bs_t* b);
 
-
 void debug_sps(sps_t* sps);
 void debug_pps(pps_t* pps);
 void debug_slice_header(slice_header_t* sh);
@@ -341,6 +368,10 @@ void debug_nal(h264_stream_t* h, nal_t* nal);
 
 void debug_bytes(uint8_t* buf, int len);
 void debug_bs(bs_t* b);
+
+void read_sei_payload( h264_stream_t* h, bs_t* b, int payloadType, int payloadSize);
+void write_sei_payload( h264_stream_t* h, bs_t* b, int payloadType, int payloadSize);
+
 
 //Table 7-1 NAL unit type codes
 #define NAL_UNIT_TYPE_UNSPECIFIED                    0    // Unspecified
@@ -368,12 +399,12 @@ void debug_bs(bs_t* b);
 #define SH_SLICE_TYPE_I        2        // I (I slice)
 #define SH_SLICE_TYPE_SP       3        // SP (SP slice)
 #define SH_SLICE_TYPE_SI       4        // SI (SI slice)
-//as per footnote to Table 7-6, the ALT slice types indicate that all other slices in that picture are of the same type
-#define SH_SLICE_TYPE_P_ALT    5        // P (P slice)
-#define SH_SLICE_TYPE_B_ALT    6        // B (B slice)
-#define SH_SLICE_TYPE_I_ALT    7        // I (I slice)
-#define SH_SLICE_TYPE_SP_ALT   8        // SP (SP slice)
-#define SH_SLICE_TYPE_SI_ALT   9        // SI (SI slice)
+//as per footnote to Table 7-6, the *_ONLY slice types indicate that all other slices in that picture are of the same type
+#define SH_SLICE_TYPE_P_ONLY    5        // P (P slice)
+#define SH_SLICE_TYPE_B_ONLY    6        // B (B slice)
+#define SH_SLICE_TYPE_I_ONLY    7        // I (I slice)
+#define SH_SLICE_TYPE_SP_ONLY   8        // SP (SP slice)
+#define SH_SLICE_TYPE_SI_ONLY   9        // SI (SI slice)
 
 //Appendix E. Table E-1  Meaning of sample aspect ratio indicator
 #define SAR_Unspecified  0           // Unspecified
@@ -407,6 +438,16 @@ void debug_bs(bs_t* b);
 #define MMCO_LONG_TERM_MAX_INDEX     4
 #define MMCO_ALL_UNUSED              5
 #define MMCO_CURRENT_TO_LONG_TERM    6
+
+//7.4.2.4 Table 7-5 Meaning of primary_pic_type
+#define AUD_PRIMARY_PIC_TYPE_I       0                // I
+#define AUD_PRIMARY_PIC_TYPE_IP      1                // I, P
+#define AUD_PRIMARY_PIC_TYPE_IPB     2                // I, P, B
+#define AUD_PRIMARY_PIC_TYPE_SI      3                // SI
+#define AUD_PRIMARY_PIC_TYPE_SISP    4                // SI, SP
+#define AUD_PRIMARY_PIC_TYPE_ISI     5                // I, SI
+#define AUD_PRIMARY_PIC_TYPE_ISIPSP  6                // I, SI, P, SP
+#define AUD_PRIMARY_PIC_TYPE_ISIPSPB 7                // I, SI, P, SP, B
 
 #ifdef __cplusplus
 }

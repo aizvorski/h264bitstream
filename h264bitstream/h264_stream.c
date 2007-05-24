@@ -1,6 +1,6 @@
 /* 
  * h264bitstream - a library for reading and writing H.264 video
- * Copyright (C) 2005-2006 Auroras Entertainment, LLC
+ * Copyright (C) 2005-2007 Auroras Entertainment, LLC
  * 
  * Written by Alex Izvorski <aizvorski@gmail.com>
  * 
@@ -26,12 +26,20 @@
 
 #include "bs.h"
 #include "h264_stream.h"
+#include "h264_sei.h"
 
 
 #define log2(x) ( (1/log(2)) * log( (x) ) )
 
+int is_slice_type(int slice_type, int cmp_type)
+{
+    if (slice_type >= 5) { slice_type -= 5; }
+    if (cmp_type >= 5) { cmp_type -= 5; }
+    if (slice_type == cmp_type) { return 1; }
+    else { return 0; }
+}
 
-/****** reading ******/
+/***************************** reading ******************************/
 
 /**
  Create a new H264 stream object.  Allocates all structures contained within it.
@@ -43,6 +51,7 @@ h264_stream_t* h264_new()
     h->nal = (nal_t*)malloc(sizeof(nal_t));
     h->sps = (sps_t*)malloc(sizeof(sps_t));
     h->pps = (pps_t*)malloc(sizeof(pps_t));
+    h->aud = (aud_t*)malloc(sizeof(aud_t));
     h->sh = (slice_header_t*)malloc(sizeof(slice_header_t));
     return h;
 }
@@ -57,6 +66,7 @@ void h264_free(h264_stream_t* h)
     free(h->nal);
     free(h->sps);
     free(h->pps);
+    free(h->aud);
     free(h->sh);
     free(h);
 }
@@ -115,6 +125,92 @@ int more_rbsp_data(h264_stream_t* h, bs_t* b) { return !bs_eof(b); }
 
 uint32_t next_bits(bs_t* b, int n) { return 0; } // FIXME UNIMPLEMENTED
 
+/**
+   Convert RBSP data to NAL data (Annex B format).
+   The size of nal_data must be 4/3 * the size of the rbsp data (rounded up) to guarantee the output will fit.
+   If that is not true, output may be truncated.  If that is true, there is no possible error during this conversion.
+   @param[in] rbsp_buf   the rbsp data
+   @param[in] rbsp_size  pointer to the size of the rbsp data
+   @param[in,out] nal_data  memory in which to put the nal data
+   @param[in,out] nal_size  as input, pointer to the maximum size of the nal data; as output, filled in with the size actually written
+ */
+// 7.3.1 NAL unit syntax
+// 7.4.1.1 Encapsulation of an SODB within an RBSP
+void rbsp_to_nal(uint8_t* rbsp_buf, int* rbsp_size, uint8_t* nal_buf, int* nal_size)
+{
+    int i, j;
+
+    i = 1; // NOTE omits first byte which contains nal_ref_idc and nal_unit_type, already written
+    j = 0;
+    while( i < *nal_size && j < *rbsp_size )
+    {
+        if( i + 3 < *nal_size && j + 2 < *rbsp_size &&
+            rbsp_buf[j] == 0x00 && rbsp_buf[j+1] == 0x00 && 
+            ( rbsp_buf[j+2] == 0x01 || rbsp_buf[j+2] == 0x02 || rbsp_buf[j+2] == 0x03 ) ) // next_bits( 24 ) == 0x000001 or 0x000002 or 0x000003
+        {
+            nal_buf[ i   ] = rbsp_buf[ j   ];
+            nal_buf[ i+1 ] = rbsp_buf[ j+1 ];
+            nal_buf[ i+2 ] = 0x03;  // emulation_prevention_three_byte equal to 0x03
+            nal_buf[ i+3 ] = rbsp_buf[ j+2 ];
+            i += 4; j += 3;
+        }
+        else if ( j == *rbsp_size - 1 && 
+                  rbsp_buf[ j ] == 0x00 )
+        {
+            nal_buf[ i ] = 0x03; // emulation_prevention_three_byte equal to 0x03 in trailing position
+            i += 1;
+        }
+        else
+        {
+            nal_buf[ i ] = rbsp_buf[ j ];
+            i += 1; j+= 1;
+        }
+    }
+    *nal_size = i;
+}
+
+/**
+   Convert NAL data (Annex B format) to RBSP data.
+   The size of rbsp_data must be the same as size of the nal data to guarantee the output will fit.
+   If that is not true, output may be truncated.  If that is true, there is no possible error during this conversion.
+   @param[in] nal_buf   the nal data
+   @param[in] nal_size  pointer to the size of the nal data
+   @param[in,out] rbsp_data  memory in which to put the rbsp data
+   @param[in,out] rbsp_size  as input, pointer to the maximum size of the rbsp data; as output, filled in with the size actually written
+ */
+// 7.3.1 NAL unit syntax
+// 7.4.1.1 Encapsulation of an SODB within an RBSP
+void nal_to_rbsp(uint8_t* nal_buf, int* nal_size, uint8_t* rbsp_buf, int* rbsp_size)
+{
+    // FIXME don't like using *nal_size etc syntax
+    int i, j;
+
+    i = 1; // NOTE omits first byte of NAL which contains nal_ref_idc and nal_unit_type, this is NOT part of the RBSP
+    j = 0;
+    while( i < *nal_size )
+    {
+        if( i + 2 < *nal_size && 
+            nal_buf[i] == 0x00 && nal_buf[i+1] == 0x00 && nal_buf[i+2] == 0x03 ) // next_bits( 24 ) == 0x000003
+        {
+            rbsp_buf[ j   ] = nal_buf[ i   ];
+            rbsp_buf[ j+1 ] = nal_buf[ i+1 ];
+            // buf[ i+2 ] == 0x03  // skip emulation_prevention_three_byte equal to 0x03 // this is guaranteed from the above condition
+            i += 3; j += 2;
+        }
+        else if (i + 2 < *nal_size && 
+            nal_buf[i] == 0x00 && nal_buf[i+1] == 0x00 && nal_buf[i+2] == 0x01 ) // next_bits( 24 ) == 0x000001 // start of next nal, we're done
+        {
+            break;
+        }
+        else
+        {
+            rbsp_buf[ j ] = nal_buf[ i ];
+            i += 1; j += 1;
+        }
+    }
+    *nal_size = i;
+    *rbsp_size = j;
+}
 
 /**
  Read a NAL unit from a byte buffer.
@@ -130,49 +226,21 @@ int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
 {
     nal_t* nal = h->nal;
 
-    bs_t* b = (bs_t*)malloc(sizeof(bs_t));;
-    bs_init(b, buf, size);
+    bs_t* b = bs_new(buf, size);
 
     nal->forbidden_zero_bit = bs_read_f(b,1);
     nal->nal_ref_idc = bs_read_u(b,2);
     nal->nal_unit_type = bs_read_u(b,5);
 
+    bs_free(b);
+
     uint8_t* rbsp_buf = (uint8_t*)malloc(size);
     int rbsp_size = 0;
-    int read_size = 0;
-    int i, j;
+    int nal_size = size;
 
-    // 7.4.1.1 Encapsulation of an SODB within an RBSP
+    nal_to_rbsp(buf, &nal_size, rbsp_buf, &rbsp_size);
 
-    i = 1; // NOTE omits first byte which contains nal_ref_idc and nal_unit_type, already read
-    j = 0;
-    while( i < size )
-    {
-        if( i + 2 < size && 
-            buf[i] == 0x00 && buf[i+1] == 0x00 && buf[i+2] == 0x03 ) // next_bits( 24 ) == 0x000003
-        {
-            rbsp_buf[ j   ] = buf[ i   ];
-            rbsp_buf[ j+1 ] = buf[ i+1 ];
-            // buf[ i+2 ] == 0x03  // emulation_prevention_three_byte equal to 0x03 // this is guaranteed from the above condition
-            i += 3; j += 2;
-        }
-        else if (i + 2 < size && 
-            buf[i] == 0x00 && buf[i+1] == 0x00 && buf[i+2] == 0x01 ) // next_bits( 24 ) == 0x000001 // start of next nal, we're done
-        {
-            break;
-        }
-        else
-        {
-            rbsp_buf[ j ] = buf[ i ];
-            i += 1; j += 1;
-        }
-    }
-    read_size = i;
-    rbsp_size = j;
-    
-    // end 7.4.1.1
-
-    bs_init(b, rbsp_buf, rbsp_size); // FIXME DEPRECATED reinit of an already inited bs
+    b = bs_new(rbsp_buf, rbsp_size);
     
     if( nal->nal_unit_type == 0) { }                                 //  0    Unspecified
     else if( nal->nal_unit_type == 1) { read_slice_layer_rbsp(h, b); }       //  1    Coded slice of a non-IDR picture
@@ -180,7 +248,7 @@ int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
     else if( nal->nal_unit_type == 3) {  }                           //  3    Coded slice data partition B
     else if( nal->nal_unit_type == 4) {  }                           //  4    Coded slice data partition C
     else if( nal->nal_unit_type == 5) { read_slice_layer_rbsp(h, b); }       //  5    Coded slice of an IDR picture
-    else if( nal->nal_unit_type == 6) { /* sei_rbsp( ); */ }         //  6    Supplemental enhancement information (SEI)
+    else if( nal->nal_unit_type == 6) { read_sei_rbsp(h, b); }         //  6    Supplemental enhancement information (SEI)
     else if( nal->nal_unit_type == 7) { read_seq_parameter_set_rbsp(h, b); } //  7    Sequence parameter set
     else if( nal->nal_unit_type == 8) { read_pic_parameter_set_rbsp(h, b); } //  8    Picture parameter set
     else if( nal->nal_unit_type == 9) { read_access_unit_delimiter_rbsp(h, b); } //  9    Access unit delimiter
@@ -193,10 +261,11 @@ int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
                                                                       //20..23 Reserved
                                                                      //24..31 Unspecified
 
-    free(rbsp_buf);
-    free(b);
+    bs_free(b); // TODO check for eof/read-beyond-end
 
-    return read_size;
+    free(rbsp_buf);
+
+    return nal_size;
 }
 
 
@@ -512,40 +581,50 @@ void read_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
     read_rbsp_trailing_bits(h, b);
 }
 
-/*
-// UNIMPLEMENTED
 //7.3.2.3 Supplemental enhancement information RBSP syntax
-read_sei_rbsp( ) {
+void read_sei_rbsp(h264_stream_t* h, bs_t* b)
+{
+    int i;
+    for (i = 0; i < h->num_seis; i++)
+    {
+        sei_free(h->seis[i]);
+    }
+    
+    h->num_seis = 0;
     do {
-        read_sei_message( );
-    } while( more_rbsp_data( ) );
-    read_rbsp_trailing_bits( );
+        h->num_seis++;
+        h->seis = (sei_t**)realloc(h->seis, h->num_seis * sizeof(sei_t*));
+        h->seis[h->num_seis - 1] = sei_new();
+        h->sei = h->seis[h->num_seis - 1];
+        read_sei_message(h, b);
+    } while( more_rbsp_data(h, b) );
+    read_rbsp_trailing_bits(h, b);
+}
+
+int _read_ff_coded_number(bs_t* b)
+{
+    int n1 = 0;
+    int n2;
+    do 
+    {
+        n2 = bs_read_u8(b);
+        n1 += n2;
+    } while (n2 == 0xff);
+    return n1;
 }
 
 //7.3.2.3.1 Supplemental enhancement information message syntax
-read_sei_message( ) {
-    payloadType = 0;
-    while( next_bits( 8 ) == 0xFF ) {
-        ff_byte = bs_read_f(8); // equal to 0xFF
-        payloadType += 255;
-    }
-    last_payload_type_byte = bs_read_u8(b);
-    payloadType += last_payload_type_byte;
-    payloadSize = 0;
-    while( next_bits( 8 ) == 0xFF ) {
-        ff_byte = bs_read_f(8); // equal to 0xFF
-        payloadSize += 255;
-    }
-    last_payload_size_byte = bs_read_u8(b);
-    payloadSize += last_payload_size_byte;
-    sei_payload( payloadType, payloadSize );
+void read_sei_message(h264_stream_t* h, bs_t* b)
+{
+    h->sei->payloadType = _read_ff_coded_number(b);
+    h->sei->payloadSize = _read_ff_coded_number(b);
+    read_sei_payload( h, b, h->sei->payloadType, h->sei->payloadSize );
 }
-*/
 
 //7.3.2.4 Access unit delimiter RBSP syntax
 void read_access_unit_delimiter_rbsp(h264_stream_t* h, bs_t* b)
 {
-    int primary_pic_type = bs_read_u(b,3); //FIXME
+    h->aud->primary_pic_type = bs_read_u(b,3);
     read_rbsp_trailing_bits(h, b);
 }
 
@@ -656,7 +735,6 @@ void read_slice_header(h264_stream_t* h, bs_t* b)
 
     sh->first_mb_in_slice = bs_read_ue(b);
     sh->slice_type = bs_read_ue(b);
-    if (sh->slice_type > 4) { sh->slice_type -= 5; } // FIXME this changes slicetypes to (supposedly) equivalent ones
     sh->pic_parameter_set_id = bs_read_ue(b);
     sh->frame_num = bs_read_u(b, sps->log2_max_frame_num_minus4 + 4 ); // was u(v)
     if( !sps->frame_mbs_only_flag )
@@ -691,25 +769,25 @@ void read_slice_header(h264_stream_t* h, bs_t* b)
     {
         sh->redundant_pic_cnt = bs_read_ue(b);
     }
-    if( sh->slice_type == SH_SLICE_TYPE_B )
+    if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
         sh->direct_spatial_mv_pred_flag = bs_read_u1(b);
     }
-    if( sh->slice_type == SH_SLICE_TYPE_P || sh->slice_type == SH_SLICE_TYPE_SP || sh->slice_type == SH_SLICE_TYPE_B )
+    if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_P ) || is_slice_type( sh->slice_type, SH_SLICE_TYPE_SP ) || is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
         sh->num_ref_idx_active_override_flag = bs_read_u1(b);
         if( sh->num_ref_idx_active_override_flag )
         {
             sh->num_ref_idx_l0_active_minus1 = bs_read_ue(b); // FIXME does this modify the pps?
-            if( sh->slice_type == SH_SLICE_TYPE_B )
+            if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
             {
                 sh->num_ref_idx_l1_active_minus1 = bs_read_ue(b);
             }
         }
     }
     read_ref_pic_list_reordering(h, b);
-    if( ( pps->weighted_pred_flag && ( sh->slice_type == SH_SLICE_TYPE_P || sh->slice_type == SH_SLICE_TYPE_SP ) ) ||
-        ( pps->weighted_bipred_idc == 1 && sh->slice_type == SH_SLICE_TYPE_B ) )
+    if( ( pps->weighted_pred_flag && ( is_slice_type( sh->slice_type, SH_SLICE_TYPE_P ) || is_slice_type( sh->slice_type, SH_SLICE_TYPE_SP ) ) ) ||
+        ( pps->weighted_bipred_idc == 1 && is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) ) )
     {
         read_pred_weight_table(h, b);
     }
@@ -717,14 +795,14 @@ void read_slice_header(h264_stream_t* h, bs_t* b)
     {
         read_dec_ref_pic_marking(h, b);
     }
-    if( pps->entropy_coding_mode_flag && sh->slice_type != SH_SLICE_TYPE_I && sh->slice_type != SH_SLICE_TYPE_SI )
+    if( pps->entropy_coding_mode_flag && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
     {
         sh->cabac_init_idc = bs_read_ue(b);
     }
     sh->slice_qp_delta = bs_read_se(b);
-    if( sh->slice_type == SH_SLICE_TYPE_SP || sh->slice_type == SH_SLICE_TYPE_SI )
+    if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_SP ) || is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
     {
-        if( sh->slice_type == SH_SLICE_TYPE_SP )
+        if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_SP ) )
         {
             sh->sp_for_switch_flag = bs_read_u1(b);
         }
@@ -753,7 +831,7 @@ void read_ref_pic_list_reordering(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
 
-    if( sh->slice_type != SH_SLICE_TYPE_I && sh->slice_type != SH_SLICE_TYPE_SI )
+    if( ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
     {
         sh->rplr.ref_pic_list_reordering_flag_l0 = bs_read_u1(b);
         if( sh->rplr.ref_pic_list_reordering_flag_l0 )
@@ -773,7 +851,7 @@ void read_ref_pic_list_reordering(h264_stream_t* h, bs_t* b)
             } while( sh->rplr.reordering_of_pic_nums_idc != 3 && ! bs_eof(b) );
         }
     }
-    if( sh->slice_type == SH_SLICE_TYPE_B )
+    if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
         sh->rplr.ref_pic_list_reordering_flag_l1 = bs_read_u1(b);
         if( sh->rplr.ref_pic_list_reordering_flag_l1 )
@@ -830,7 +908,7 @@ void read_pred_weight_table(h264_stream_t* h, bs_t* b)
             }
         }
     }
-    if( sh->slice_type == SH_SLICE_TYPE_B )
+    if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
         for( i = 0; i <= pps->num_ref_idx_l1_active_minus1; i++ )
         {
@@ -909,7 +987,7 @@ slice_data( )
     moreDataFlag = 1;
     prevMbSkipped = 0;
     do {
-        if( sh->slice_type != SH_SLICE_TYPE_I && sh->slice_type != SH_SLICE_TYPE_SI )
+        if( ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
             if( !pps->entropy_coding_mode_flag ) {
                 mb_skip_run = bs_read_ue(b);
                 prevMbSkipped = ( mb_skip_run > 0 );
@@ -929,7 +1007,7 @@ slice_data( )
         if( !pps->entropy_coding_mode_flag )
             moreDataFlag = more_rbsp_data( );
         else {
-            if( sh->slice_type != SH_SLICE_TYPE_I && sh->slice_type != SH_SLICE_TYPE_SI )
+            if( ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
                 prevMbSkipped = mb_skip_flag;
             if( MbaffFrameFlag && CurrMbAddr % 2 == 0 )
                 moreDataFlag = 1;
@@ -944,7 +1022,7 @@ slice_data( )
 */
 
 
-/****** writing ******/
+/***************************** writing ******************************/
 
 #define DBG_START \
     bs_t* b2 = (bs_t*)malloc(sizeof(bs_t)); \
@@ -977,19 +1055,19 @@ int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
 {
     nal_t* nal = h->nal;
 
-    bs_t* b = (bs_t*)malloc(sizeof(bs_t));;
-    bs_init(b, buf, size);
+    bs_t* b = bs_new(buf, size);
 
     bs_write_f(b,1, nal->forbidden_zero_bit);
     bs_write_u(b,2, nal->nal_ref_idc);
     bs_write_u(b,5, nal->nal_unit_type);
 
-    uint8_t* rbsp_buf = (uint8_t*)malloc(size); // NOTE this may have to be slightly smaller (4/3 smaller, worst case) in order to be guaranteed to fit
-    int rbsp_size = 0;
-    int write_size = 0;
-    int i, j;
+    bs_free(b);
 
-    bs_init(b, rbsp_buf, size); // FIXME DEPRECATED reinit of an already inited bs
+    uint8_t* rbsp_buf = (uint8_t*)malloc(size*3/4); // NOTE this may have to be slightly smaller (3/4 smaller, worst case) in order to be guaranteed to fit
+    int rbsp_size = 0;
+    int nal_size = size;
+
+    b = bs_new(rbsp_buf, rbsp_size); // FIXME DEPRECATED reinit of an already inited bs
     
     if( nal->nal_unit_type == 0) { }                                 //  0    Unspecified
     else if( nal->nal_unit_type == 1) { write_slice_layer_rbsp(h, b); }       //  1    Coded slice of a non-IDR picture
@@ -997,7 +1075,7 @@ int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
     else if( nal->nal_unit_type == 3) {  }                           //  3    Coded slice data partition B
     else if( nal->nal_unit_type == 4) {  }                           //  4    Coded slice data partition C
     else if( nal->nal_unit_type == 5) { write_slice_layer_rbsp(h, b); }       //  5    Coded slice of an IDR picture
-    else if( nal->nal_unit_type == 6) { /* sei_rbsp( ); */ }         //  6    Supplemental enhancement information (SEI)
+    else if( nal->nal_unit_type == 6) { write_sei_rbsp(h, b); }         //  6    Supplemental enhancement information (SEI)
     else if( nal->nal_unit_type == 7) { write_seq_parameter_set_rbsp(h, b); } //  7    Sequence parameter set
     else if( nal->nal_unit_type == 8) { write_pic_parameter_set_rbsp(h, b); } //  8    Picture parameter set
     else if( nal->nal_unit_type == 9) { write_access_unit_delimiter_rbsp(h, b); } //  9    Access unit delimiter
@@ -1010,44 +1088,14 @@ int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
                                                                       //20..23 Reserved
                                                                      //24..31 Unspecified
 
-    rbsp_size = bs_pos(b);
+    rbsp_size = bs_pos(b); // TODO check for eof/write-beyond-end
+    bs_free(b);
 
-    // 7.4.1.1 Encapsulation of an SODB within an RBSP
-
-    i = 1; // NOTE omits first byte which contains nal_ref_idc and nal_unit_type, already written
-    j = 0;
-    while( i < size && j < rbsp_size )
-    {
-        if( i + 3 < size && j + 2 < rbsp_size &&
-            rbsp_buf[j] == 0x00 && rbsp_buf[j+1] == 0x00 && 
-            ( rbsp_buf[j+2] == 0x01 || rbsp_buf[j+2] == 0x02 || rbsp_buf[j+2] == 0x03 ) ) // next_bits( 24 ) == 0x000001 or 0x000002 or 0x000003
-        {
-            buf[ i   ] = rbsp_buf[ j   ];
-            buf[ i+1 ] = rbsp_buf[ j+1 ];
-            buf[ i+2 ] = 0x03;  // emulation_prevention_three_byte equal to 0x03
-            buf[ i+3 ] = rbsp_buf[ j+2 ];
-            i += 4; j += 3;
-        }
-        else if ( j == rbsp_size - 1 && 
-                  rbsp_buf[ j ] == 0x00 )
-        {
-            buf[ i ] == 0x03; // emulation_prevention_three_byte equal to 0x03 in trailing position
-            i += 1;
-        }
-        else
-        {
-            buf[ i ] = rbsp_buf[ j ];
-            i += 1; j+= 1;
-        }
-    }
-    write_size = i;
-
-    // end 7.4.1.1
+    rbsp_to_nal(rbsp_buf, &rbsp_size, buf, &nal_size);
 
     free(rbsp_buf);
-    free(b);
 
-    return write_size;
+    return nal_size;
 }
 
 
@@ -1281,7 +1329,8 @@ int write_seq_parameter_set_extension_rbsp(bs_t* b, sps_ext_t* sps_ext) {
 */
 
 //7.3.2.2 Picture parameter set RBSP syntax
-void write_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b) {
+void write_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
+{
     pps_t* pps = h->pps;
 
     int i;
@@ -1365,41 +1414,48 @@ void write_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b) {
     write_rbsp_trailing_bits(h, b);
 }
 
-/*
-// UNIMPLEMENTED
 //7.3.2.3 Supplemental enhancement information RBSP syntax
-write_sei_rbsp( ) {
-    do {
-        write_sei_message( );
-    } while( more_rbsp_data( ) );
-    write_rbsp_trailing_bits( );
+void write_sei_rbsp(h264_stream_t* h, bs_t* b)
+{
+    int i;
+    for (i = 0; i < h->num_seis; i++)
+    {
+        h->sei = h->seis[i];
+        write_sei_message(h, b);
+    }
+    write_rbsp_trailing_bits(h, b);
+}
+
+void _write_ff_coded_number(bs_t* b, int n)
+{
+    while (1)
+    {
+        if (n > 0xff)
+        {
+            bs_write_u8(b, 0xff);
+            n -= 0xff;
+        }
+        else
+        {
+            bs_write_u8(b, n);
+            break;
+        }
+    }
 }
 
 //7.3.2.3.1 Supplemental enhancement information message syntax
-write_sei_message( ) {
-    payloadType = 0;
-    while( next_bits( 8 ) == 0xFF ) {
-        bs_write_f(8, ff_byte); // equal to 0xFF
-        payloadType += 255;
-    }
-    bs_write_u8(b, last_payload_type_byte);
-    payloadType += last_payload_type_byte;
-    payloadSize = 0;
-    while( next_bits( 8 ) == 0xFF ) {
-        bs_write_f(8, ff_byte); // equal to 0xFF
-        payloadSize += 255;
-    }
-    bs_write_u8(b, last_payload_size_byte);
-    payloadSize += last_payload_size_byte;
-    sei_payload( payloadType, payloadSize );
+void write_sei_message(h264_stream_t* h, bs_t* b)
+{
+    // FIXME need some way to calculate size, or write message then write size
+    _write_ff_coded_number(b, h->sei->payloadType);
+    _write_ff_coded_number(b, h->sei->payloadSize);
+    write_sei_payload( h, b, h->sei->payloadType, h->sei->payloadSize );
 }
-*/
 
 //7.3.2.4 Access unit delimiter RBSP syntax
 void write_access_unit_delimiter_rbsp(h264_stream_t* h, bs_t* b)
 {
-    int primary_pic_type; //FIXME
-    bs_write_u(b,3, primary_pic_type);
+    bs_write_u(b,3, h->aud->primary_pic_type);
     write_rbsp_trailing_bits(h, b);
 }
 
@@ -1544,25 +1600,25 @@ void write_slice_header(h264_stream_t* h, bs_t* b)
     {
         bs_write_ue(b, sh->redundant_pic_cnt);
     }
-    if( sh->slice_type == SH_SLICE_TYPE_B )
+    if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
         bs_write_u1(b, sh->direct_spatial_mv_pred_flag);
     }
-    if( sh->slice_type == SH_SLICE_TYPE_P || sh->slice_type == SH_SLICE_TYPE_SP || sh->slice_type == SH_SLICE_TYPE_B )
+    if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_P ) || is_slice_type( sh->slice_type, SH_SLICE_TYPE_SP ) || is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
         bs_write_u1(b, sh->num_ref_idx_active_override_flag);
         if( sh->num_ref_idx_active_override_flag )
         {
             bs_write_ue(b, sh->num_ref_idx_l0_active_minus1); // FIXME does this modify the pps?
-            if( sh->slice_type == SH_SLICE_TYPE_B )
+            if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
             {
                 bs_write_ue(b, sh->num_ref_idx_l1_active_minus1);
             }
         }
     }
     write_ref_pic_list_reordering(h, b);
-    if( ( pps->weighted_pred_flag && ( sh->slice_type == SH_SLICE_TYPE_P || sh->slice_type == SH_SLICE_TYPE_SP ) ) ||
-        ( pps->weighted_bipred_idc == 1 && sh->slice_type == SH_SLICE_TYPE_B ) )
+    if( ( pps->weighted_pred_flag && ( is_slice_type( sh->slice_type, SH_SLICE_TYPE_P ) || is_slice_type( sh->slice_type, SH_SLICE_TYPE_SP ) ) ) ||
+        ( pps->weighted_bipred_idc == 1 && is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) ) )
     {
         write_pred_weight_table(h, b);
     }
@@ -1570,14 +1626,14 @@ void write_slice_header(h264_stream_t* h, bs_t* b)
     {
         write_dec_ref_pic_marking(h, b);
     }
-    if( pps->entropy_coding_mode_flag && sh->slice_type != SH_SLICE_TYPE_I && sh->slice_type != SH_SLICE_TYPE_SI )
+    if( pps->entropy_coding_mode_flag && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
     {
         bs_write_ue(b, sh->cabac_init_idc);
     }
     bs_write_se(b, sh->slice_qp_delta);
-    if( sh->slice_type == SH_SLICE_TYPE_SP || sh->slice_type == SH_SLICE_TYPE_SI )
+    if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_SP ) || is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
     {
-        if( sh->slice_type == SH_SLICE_TYPE_SP )
+        if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_SP ) )
         {
             bs_write_u1(b, sh->sp_for_switch_flag);
         }
@@ -1609,7 +1665,7 @@ void write_ref_pic_list_reordering(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
 
-    if( sh->slice_type != SH_SLICE_TYPE_I && sh->slice_type != SH_SLICE_TYPE_SI )
+    if( ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
     {
         bs_write_u1(b, sh->rplr.ref_pic_list_reordering_flag_l0);
         if( sh->rplr.ref_pic_list_reordering_flag_l0 )
@@ -1629,7 +1685,7 @@ void write_ref_pic_list_reordering(h264_stream_t* h, bs_t* b)
             } while( sh->rplr.reordering_of_pic_nums_idc != 3 );
         }
     }
-    if( sh->slice_type == SH_SLICE_TYPE_B )
+    if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
         bs_write_u1(b, sh->rplr.ref_pic_list_reordering_flag_l1);
         if( sh->rplr.ref_pic_list_reordering_flag_l1 )
@@ -1686,7 +1742,7 @@ void write_pred_weight_table(h264_stream_t* h, bs_t* b)
             }
         }
     }
-    if( sh->slice_type == SH_SLICE_TYPE_B )
+    if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
         for( i = 0; i <= pps->num_ref_idx_l1_active_minus1; i++ )
         {
@@ -1765,7 +1821,7 @@ slice_data( )
     moreDataFlag = 1;
     prevMbSkipped = 0;
     do {
-        if( sh->slice_type != SH_SLICE_TYPE_I && ssh->lice_type != SH_SLICE_TYPE_SI )
+        if( ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ssh->lice_type != SH_SLICE_TYPE_SI )
             if( !pps->entropy_coding_mode_flag ) {
                 bs_write_ue(b, mb_skip_run);
                 prevMbSkipped = ( mb_skip_run > 0 );
@@ -1785,7 +1841,7 @@ slice_data( )
         if( !pps->entropy_coding_mode_flag )
             moreDataFlag = more_rbsp_data( );
         else {
-            if( sh->slice_type != SH_SLICE_TYPE_I && sh->slice_type != SH_SLICE_TYPE_SI )
+            if( ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
                 prevMbSkipped = mb_skip_flag;
             if( MbaffFrameFlag && CurrMbAddr % 2 == 0 )
                 moreDataFlag = 1;
@@ -1802,7 +1858,7 @@ slice_data( )
 
 
 
-/************** debug **************/
+/***************************** debug ******************************/
 
 void debug_sps(sps_t* sps)
 {
@@ -1937,11 +1993,22 @@ void debug_slice_header(slice_header_t* sh)
     printf("======= Slice Header =======\n");
     printf(" first_mb_in_slice : %02x \n", sh->first_mb_in_slice );
     const char* slice_type_name;
-    if (sh->slice_type == SH_SLICE_TYPE_I) { slice_type_name = "I Frame"; }
-    else if (sh->slice_type == SH_SLICE_TYPE_P) { slice_type_name = "P Frame"; }
-    else if (sh->slice_type == SH_SLICE_TYPE_B) { slice_type_name = "B Frame"; }
-    else { slice_type_name = "?"; }
+    switch(sh->slice_type)
+    {
+    case SH_SLICE_TYPE_P :       slice_type_name = "P slice"; break;
+    case SH_SLICE_TYPE_B :       slice_type_name = "B slice"; break;
+    case SH_SLICE_TYPE_I :       slice_type_name = "I slice"; break;
+    case SH_SLICE_TYPE_SP :      slice_type_name = "SP slice"; break;
+    case SH_SLICE_TYPE_SI :      slice_type_name = "SI slice"; break;
+    case SH_SLICE_TYPE_P_ONLY :  slice_type_name = "P slice only"; break;
+    case SH_SLICE_TYPE_B_ONLY :  slice_type_name = "B slice only"; break;
+    case SH_SLICE_TYPE_I_ONLY :  slice_type_name = "I slice only"; break;
+    case SH_SLICE_TYPE_SP_ONLY : slice_type_name = "SP slice only"; break;
+    case SH_SLICE_TYPE_SI_ONLY : slice_type_name = "SI slice only"; break;
+    default :                    slice_type_name = "Unknown"; break;
+    }
     printf(" slice_type : %02x ( %s ) \n", sh->slice_type, slice_type_name );
+
     printf(" pic_parameter_set_id : %02x \n", sh->pic_parameter_set_id );
     printf(" frame_num : %02x \n", sh->frame_num );
     printf(" field_pic_flag : %02x \n", sh->field_pic_flag );
@@ -1999,6 +2066,62 @@ void debug_slice_header(slice_header_t* sh)
 
 }
 
+void debug_aud(aud_t* aud)
+{
+    printf("======= Access Unit Delimiter =======\n");
+    const char* primary_pic_type_name;
+    switch (aud->primary_pic_type)
+    {
+        //case AUD_PIC_TYPE_I : break;
+        // TODO
+    default : primary_pic_type_name = "";
+    }
+    printf(" primary_pic_type : %02x ( %s ) \n", aud->primary_pic_type, primary_pic_type_name );
+}
+
+void debug_seis(sei_t** seis, int num_seis)
+{
+    printf("======= SEI =======\n");
+    const char* sei_type_name;
+    int i;
+    for (i = 0; i < num_seis; i++)
+    {
+        sei_t* s = seis[i];
+        switch(s->payloadType)
+        {
+        case SEI_TYPE_BUFFERING_PERIOD : sei_type_name = "Buffering period"; break;
+        case SEI_TYPE_PIC_TIMING : sei_type_name = "Pic timing"; break;
+        case SEI_TYPE_PAN_SCAN_RECT : sei_type_name = "Pan scan rect"; break;
+        case SEI_TYPE_FILLER_PAYLOAD : sei_type_name = "Filler payload"; break;
+        case SEI_TYPE_USER_DATA_REGISTERED_ITU_T_T35 : sei_type_name = "User data registered ITU-T T35"; break;
+        case SEI_TYPE_USER_DATA_UNREGISTERED : sei_type_name = "User data unregistered"; break;
+        case SEI_TYPE_RECOVERY_POINT : sei_type_name = "Recovery point"; break;
+        case SEI_TYPE_DEC_REF_PIC_MARKING_REPETITION : sei_type_name = "Dec ref pic marking repetition"; break;
+        case SEI_TYPE_SPARE_PIC : sei_type_name = "Spare pic"; break;
+        case SEI_TYPE_SCENE_INFO : sei_type_name = "Scene info"; break;
+        case SEI_TYPE_SUB_SEQ_INFO : sei_type_name = "Sub seq info"; break;
+        case SEI_TYPE_SUB_SEQ_LAYER_CHARACTERISTICS : sei_type_name = "Sub seq layer characteristics"; break;
+        case SEI_TYPE_SUB_SEQ_CHARACTERISTICS : sei_type_name = "Sub seq characteristics"; break;
+        case SEI_TYPE_FULL_FRAME_FREEZE : sei_type_name = "Full frame freeze"; break;
+        case SEI_TYPE_FULL_FRAME_FREEZE_RELEASE : sei_type_name = "Full frame freeze release"; break;
+        case SEI_TYPE_FULL_FRAME_SNAPSHOT : sei_type_name = "Full frame snapshot"; break;
+        case SEI_TYPE_PROGRESSIVE_REFINEMENT_SEGMENT_START : sei_type_name = "Progressive refinement segment start"; break;
+        case SEI_TYPE_PROGRESSIVE_REFINEMENT_SEGMENT_END : sei_type_name = "Progressive refinement segment end"; break;
+        case SEI_TYPE_MOTION_CONSTRAINED_SLICE_GROUP_SET : sei_type_name = "Motion constrained slice group set"; break;
+        case SEI_TYPE_FILM_GRAIN_CHARACTERISTICS : sei_type_name = "Film grain characteristics"; break;
+        case SEI_TYPE_DEBLOCKING_FILTER_DISPLAY_PREFERENCE : sei_type_name = "Deblocking filter display preference"; break;
+        case SEI_TYPE_STEREO_VIDEO_INFO : sei_type_name = "Stereo video info"; break;
+        default: sei_type_name = "Unknown"; break;
+        }
+        printf("=== %s ===\n", sei_type_name);
+        printf(" payloadType : %02x \n", s->payloadType );
+        printf(" payloadSize : %02x \n", s->payloadSize );
+        
+        printf(" payload : " );
+        debug_bytes(s->payload, s->payloadSize);
+    }
+}
+
 /**
  Print the contents of a NAL unit to standard output.
  The NAL which is printed out has a type determined by nal and data which comes from other fields within h depending on its type.
@@ -2010,15 +2133,38 @@ void debug_nal(h264_stream_t* h, nal_t* nal)
     printf("==================== NAL ====================\n");
     printf(" forbidden_zero_bit : %02x \n", nal->forbidden_zero_bit );
     printf(" nal_ref_idc : %02x \n", nal->nal_ref_idc );
-    printf(" nal_unit_type : %02x \n", nal->nal_unit_type );
-    //uint8_t* rbsp_buf;
-    //int rbsp_size;
+    // TODO make into subroutine
+    const char* nal_unit_type_name;
+    switch (nal->nal_unit_type)
+    {
+    case  NAL_UNIT_TYPE_UNSPECIFIED :                   nal_unit_type_name = "Unspecified"; break;
+    case  NAL_UNIT_TYPE_CODED_SLICE_NON_IDR :           nal_unit_type_name = "Coded slice of a non-IDR picture"; break;
+    case  NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_A :  nal_unit_type_name = "Coded slice data partition A"; break;
+    case  NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_B :  nal_unit_type_name = "Coded slice data partition B"; break;
+    case  NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_C :  nal_unit_type_name = "Coded slice data partition C"; break;
+    case  NAL_UNIT_TYPE_CODED_SLICE_IDR :               nal_unit_type_name = "Coded slice of an IDR picture"; break;
+    case  NAL_UNIT_TYPE_SEI :                           nal_unit_type_name = "Supplemental enhancement information (SEI)"; break;
+    case  NAL_UNIT_TYPE_SPS :                           nal_unit_type_name = "Sequence parameter set"; break;
+    case  NAL_UNIT_TYPE_PPS :                           nal_unit_type_name = "Picture parameter set"; break;
+    case  NAL_UNIT_TYPE_AUD :                           nal_unit_type_name = "Access unit delimiter"; break;
+    case  NAL_UNIT_TYPE_END_OF_SEQUENCE :               nal_unit_type_name = "End of sequence"; break;
+    case  NAL_UNIT_TYPE_END_OF_STREAM :                 nal_unit_type_name = "End of stream"; break;
+    case  NAL_UNIT_TYPE_FILLER :                        nal_unit_type_name = "Filler data"; break;
+    case  NAL_UNIT_TYPE_SPS_EXT :                       nal_unit_type_name = "Sequence parameter set extension"; break;
+        // 14..18    // Reserved
+    case  NAL_UNIT_TYPE_CODED_SLICE_AUX :               nal_unit_type_name = "Coded slice of an auxiliary coded picture without partitioning"; break;
+        // 20..23    // Reserved
+        // 24..31    // Unspecified
+    default :                                           nal_unit_type_name = "Unknown"; break;
+    }
+    printf(" nal_unit_type : %02x ( %s ) \n", nal->nal_unit_type, nal_unit_type_name );
 
-    if( nal->nal_unit_type == 0) { }                                 //  0    Unspecified
-    else if( nal->nal_unit_type == 1) { debug_slice_header(h->sh); }       //  1    Coded slice of a non-IDR picture
-    else if( nal->nal_unit_type == 5) { debug_slice_header(h->sh); }       //  5    Coded slice of an IDR picture
-    else if( nal->nal_unit_type == 7) { debug_sps(h->sps); } //  7    Sequence parameter set
-    else if( nal->nal_unit_type == 8) { debug_pps(h->pps); } //  8    Picture parameter set
+    if( nal->nal_unit_type == NAL_UNIT_TYPE_CODED_SLICE_NON_IDR) { debug_slice_header(h->sh); }
+    else if( nal->nal_unit_type == NAL_UNIT_TYPE_CODED_SLICE_IDR) { debug_slice_header(h->sh); }
+    else if( nal->nal_unit_type == NAL_UNIT_TYPE_SPS) { debug_sps(h->sps); }
+    else if( nal->nal_unit_type == NAL_UNIT_TYPE_PPS) { debug_pps(h->pps); }
+    else if( nal->nal_unit_type == NAL_UNIT_TYPE_AUD) { debug_aud(h->aud); }
+    else if( nal->nal_unit_type == NAL_UNIT_TYPE_SEI) { debug_seis(h->seis, h->num_seis); }
 }
 
 void debug_bytes(uint8_t* buf, int len)
