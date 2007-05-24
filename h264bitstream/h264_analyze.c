@@ -23,6 +23,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -50,7 +51,7 @@ int main(int argc, char *argv[])
 
     int rsz = 0;
     int sz = 0;
-    int off = 0;
+    int64_t off = 0;
     uint8_t* p = buf;
 
     int nal_start, nal_end;
@@ -61,9 +62,11 @@ int main(int argc, char *argv[])
 
         while (find_nal_unit(p, sz, &nal_start, &nal_end) > 0)
         {
-            printf("!! Found NAL at offset 0x%04X (%d), size 0x%04X (%d) \n", 
-                   off + (p - buf) + nal_start, off + (p - buf) + nal_start, 
-                   (nal_end - nal_start), (nal_end - nal_start));
+            printf("!! Found NAL at offset 0x%04"PRIX64" (%"PRId64"), size 0x%04"PRIX64" (%"PRId64") \n", 
+                   (int64_t)(off + (p - buf) + nal_start), 
+                   (int64_t)(off + (p - buf) + nal_start), 
+                   (int64_t)(nal_end - nal_start), 
+                   (int64_t)(nal_end - nal_start) );
             p += nal_start;
             read_nal_unit(h, p, nal_end - nal_start);
             debug_nal(h, h->nal);
@@ -74,9 +77,11 @@ int main(int argc, char *argv[])
         // if no NALs found in buffer, discard it
         if (p == buf) 
         {
-            printf("!! Did not find any NALs between offset 0x%04X (%d) and 0x%04X (%d), discarding \n", 
-                   off, off, 
-                   off + sz, off + sz);
+            printf("!! Did not find any NALs between offset 0x%04"PRIX64" (%"PRId64"), size 0x%04"PRIX64" (%"PRId64"), discarding \n", 
+                   (int64_t)off, 
+                   (int64_t)off, 
+                   (int64_t)off + sz, 
+                   (int64_t)off + sz);
 
             p = buf + sz;
             sz = 0;

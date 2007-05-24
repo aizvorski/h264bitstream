@@ -12,15 +12,15 @@ ARFLAGS = qc
 all: libh264bitstream.a h264_analyze
 
 
-h264_analyze:  
-	$(CC) $(CFLAGS) -c -o h264_analyze.o h264_analyze.c
+h264_analyze: h264_analyze.o libh264bitstream.a
 	$(CC) $(CFLAGS) -o h264_analyze h264_analyze.o -L. -lm -lh264bitstream
 
 
-libh264bitstream.a: h264_stream.c h264_stream.h bs.c bs.h
+libh264bitstream.a: h264_stream.c h264_stream.h h264_sei.c h264_sei.h bs.c bs.h
 	$(CC) $(CFLAGS) -c -o bs.o bs.c
 	$(CC) $(CFLAGS) -c -o h264_stream.o h264_stream.c
-	$(AR) $(ARFLAGS) libh264bitstream.a h264_stream.o bs.o
+	$(CC) $(CFLAGS) -c -o h264_sei.o h264_sei.c
+	$(AR) $(ARFLAGS) libh264bitstream.a h264_stream.o h264_sei.o bs.o
 	ranlib libh264bitstream.a
 
 
