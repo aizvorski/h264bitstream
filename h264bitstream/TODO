@@ -1,5 +1,4 @@
 - fix bug: find_nal_unit probably not always correct, especially when end of nal is exactly at the end of available data
-- fix bug: writing scaling lists
 - built-in unit test - read/write known streams
 - built-in unit test - write random data then read back and compare, or vice versa
 - implement reading and writing SEI 
