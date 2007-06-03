@@ -6,7 +6,7 @@ CFLAGS = -std=c99 -pedantic -Wall -W -Wshadow -Wwrite-strings -Wno-unused -g
 
 
 AR = ar
-ARFLAGS = qc
+ARFLAGS = rsc
 
 
 all: libh264bitstream.a h264_analyze

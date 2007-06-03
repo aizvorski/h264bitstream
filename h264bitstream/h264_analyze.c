@@ -1,6 +1,6 @@
 /* 
  * h264bitstream - a library for reading and writing H.264 video
- * Copyright (C) 2005-2006 Auroras Entertainment, LLC
+ * Copyright (C) 2005-2007 Auroras Entertainment, LLC
  * 
  * Written by Alex Izvorski <aizvorski@gmail.com>
  * 
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 
         while (find_nal_unit(p, sz, &nal_start, &nal_end) > 0)
         {
-            printf("!! Found NAL at offset 0x%04"PRIX64" (%"PRId64"), size 0x%04"PRIX64" (%"PRId64") \n", 
+            printf("!! Found NAL at offset %"PRId64" (0x%04"PRIX64"), size %"PRId64" (0x%04"PRIX64") \n", 
                    (int64_t)(off + (p - buf) + nal_start), 
                    (int64_t)(off + (p - buf) + nal_start), 
                    (int64_t)(nal_end - nal_start), 
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
         // if no NALs found in buffer, discard it
         if (p == buf) 
         {
-            printf("!! Did not find any NALs between offset 0x%04"PRIX64" (%"PRId64"), size 0x%04"PRIX64" (%"PRId64"), discarding \n", 
+            printf("!! Did not find any NALs between offset %"PRId64" (0x%04"PRIX64"), size %"PRId64" (0x%04"PRIX64"), discarding \n", 
                    (int64_t)off, 
                    (int64_t)off, 
                    (int64_t)off + sz, 

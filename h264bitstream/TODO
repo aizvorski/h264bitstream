@@ -12,7 +12,6 @@
   - special case whole bytes which are byte-aligned
 - show as "N/A" or "-" instead of 0 values which are disabled by earlier flags in debug prints
 - debug to string or file handle, not stdout, for more flexibility
-- debug functions or macros that print the human-readable names of various things (nal unit types, slice types)
 - debug print some values as both hex and decimal (height/width/length - possibly all values?)
 - prefix all functions with h264_ to avoid namespace pollution
 - switch to using nal_unit_type defines instead of constants

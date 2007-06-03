@@ -9,4 +9,6 @@ bs.c
 bs.h
 h264_stream.c
 h264_stream.h
+h264_sei.c
+h264_sei.h
 h264_analyze.c
