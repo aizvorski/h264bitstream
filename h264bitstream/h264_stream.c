@@ -131,7 +131,7 @@ uint32_t next_bits(bs_t* b, int n) { return 0; } // FIXME UNIMPLEMENTED
    If that is not true, output may be truncated.  If that is true, there is no possible error during this conversion.
    @param[in] rbsp_buf   the rbsp data
    @param[in] rbsp_size  pointer to the size of the rbsp data
-   @param[in,out] nal_data  memory in which to put the nal data
+   @param[in,out] nal_buf   allocated memory in which to put the nal data
    @param[in,out] nal_size  as input, pointer to the maximum size of the nal data; as output, filled in with the size actually written
  */
 // 7.3.1 NAL unit syntax
@@ -175,7 +175,7 @@ void rbsp_to_nal(uint8_t* rbsp_buf, int* rbsp_size, uint8_t* nal_buf, int* nal_s
    If that is not true, output may be truncated.  If that is true, there is no possible error during this conversion.
    @param[in] nal_buf   the nal data
    @param[in] nal_size  pointer to the size of the nal data
-   @param[in,out] rbsp_data  memory in which to put the rbsp data
+   @param[in,out] rbsp_buf   allocated memory in which to put the rbsp data
    @param[in,out] rbsp_size  as input, pointer to the maximum size of the rbsp data; as output, filled in with the size actually written
  */
 // 7.3.1 NAL unit syntax
