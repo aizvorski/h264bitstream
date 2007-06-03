@@ -1197,19 +1197,25 @@ void write_scaling_list(bs_t* b, int* scalingList, int sizeOfScalingList, int us
 
     int lastScale = 8;
     int nextScale = 8;
+
     for( j = 0; j < sizeOfScalingList; j++ )
     {
         int delta_scale;
+
         if( nextScale != 0 )
         {
-            // FIXME
-            /*
-            nextScale = ( lastScale + delta_scale + 256 ) % 256;
-            useDefaultScalingMatrixFlag = ( j == 0 && nextScale == 0 );
-            */
+            // FIXME will not write in most compact way - could truncate list if all remaining elements are equal
+            nextScale = scalingList[ j ]; 
+
+            if (useDefaultScalingMatrixFlag)
+            {
+                nextScale = 0;
+            }
+
+            delta_scale = (nextScale - lastScale) % 256 ;
             bs_write_se(b, delta_scale);
         }
-        scalingList[ j ] = ( nextScale == 0 ) ? lastScale : nextScale;
+
         lastScale = scalingList[ j ];
     }
 }
