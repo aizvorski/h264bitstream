@@ -1,4 +1,4 @@
-VERSION = 0.1.6
+VERSION = 0.1.7
 
 INCLUDES = 
 LIBS = 
@@ -16,7 +16,8 @@ ARFLAGS = rsc
 all: libh264bitstream.a h264_analyze
 
 
-h264_analyze: h264_analyze.o libh264bitstream.a
+h264_analyze: h264_analyze.c libh264bitstream.a
+	$(CC) $(CFLAGS) -c -o h264_analyze.o h264_analyze.c
 	$(LD) $(LDFLAGS) -o h264_analyze h264_analyze.o -L. -lm -lh264bitstream
 
 
