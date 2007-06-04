@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
 
 #include "bs.h"
@@ -53,6 +54,8 @@ h264_stream_t* h264_new()
     h->pps = (pps_t*)malloc(sizeof(pps_t));
     h->aud = (aud_t*)malloc(sizeof(aud_t));
     h->sh = (slice_header_t*)malloc(sizeof(slice_header_t));
+    h->num_seis = 0;
+    h->seis = NULL;
     return h;
 }
 
@@ -68,6 +71,12 @@ void h264_free(h264_stream_t* h)
     free(h->pps);
     free(h->aud);
     free(h->sh);
+    int i;
+    for (i = 0; i < h->num_seis; i++)
+    {
+        sei_free(h->seis[i]);
+    }
+    free(h->seis);
     free(h);
 }
 
@@ -273,6 +282,7 @@ int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
 void read_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
 {
     sps_t* sps = h->sps;
+    memset(sps, 0, sizeof(sps_t));
 
     int i;
 
@@ -499,6 +509,7 @@ int read_seq_parameter_set_extension_rbsp(bs_t* b, sps_ext_t* sps_ext) {
 void read_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
 {
     pps_t* pps = h->pps;
+    memset(pps, 0, sizeof(pps_t));
 
     int i;
     int i_group;
@@ -729,6 +740,8 @@ void read_rbsp_trailing_bits(h264_stream_t* h, bs_t* b)
 void read_slice_header(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
+    memset(sh, 0, sizeof(slice_header_t));
+
     sps_t* sps = h->sps;
     pps_t* pps = h->pps;
     nal_t* nal = h->nal;
