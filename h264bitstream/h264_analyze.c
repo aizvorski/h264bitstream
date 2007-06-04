@@ -23,15 +23,26 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include <inttypes.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
+
+
+#if !defined(MINGW)
+#include <inttypes.h>
+#else
+#define PRId64 "lld"
+#define PRIX64 "llX"
+#endif
+
+#if !defined(MINGW)
+#define O_BINARY 0
+#endif
+
 
 #define BUFSIZE 8*1024*1024
-
-
 
 int main(int argc, char *argv[])
 {
@@ -40,14 +51,14 @@ int main(int argc, char *argv[])
 
     if (argc < 2)
     {
-        printf("h264_analyze, version 0.1.6\n");
+        printf("h264_analyze, version 0.1.7\n");
         printf("Usage: \n");
         printf("  h264_analyze stream.h264\n");
         printf("where stream.h264 is a raw H264 stream, as produced by JM or x264\n");
     }
 
-    int fd = open(argv[1], O_RDONLY);
-    if (fd == -1) { perror("could not open file"); exit(0); }
+    int fd = open(argv[1], O_RDONLY|O_BINARY);
+    if (fd == -1) { printf("!! Error: could not open file: %s \n", strerror(errno)); exit(0); }
 
     int rsz = 0;
     int sz = 0;
@@ -56,8 +67,12 @@ int main(int argc, char *argv[])
 
     int nal_start, nal_end;
 
-    while ((rsz = read(fd, buf + sz, BUFSIZE - sz)))
+    while (1)
     {
+        rsz = read(fd, buf + sz, BUFSIZE - sz);
+        if (rsz < 0) { printf("!! Error: read failed: %s \n", strerror(errno)); break; }
+        if (rsz == 0) { printf("!! End of file\n"); break; }
+
         sz += rsz;
 
         while (find_nal_unit(p, sz, &nal_start, &nal_end) > 0)
@@ -94,4 +109,6 @@ int main(int argc, char *argv[])
 
     h264_free(h);
     free(buf);
+
+    exit(0);
 }
