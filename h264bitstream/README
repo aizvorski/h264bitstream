@@ -5,6 +5,9 @@ Written by Alex Izvorski <aizvorski@gmail.com>
 This library is distributed under the GNU Lesser General Public License.
 Please see the file COPYING for more details.
 
+Homepage: http://h264bitstream.sourceforge.net/
+Sourceforge Project Page: http://sourceforge.net/projects/h264bitstream/
+
 
 == Quick Start ==
 
@@ -69,7 +72,7 @@ The public API consists of:
 
 plus direct access to the fields of h264_stream_t and the data structures nested in that.
 
-Using other functions contained in the library to directly read or write specific types of nals or parts thereof is not part of the public API, although it is not hard to do if you prepare the required bs_t argument.  Please also note that using *_rbsp functions requires you also to perform handle RBSP to NAL (and vice versa) translation by calling rbsp_to_nal and nal_to_rbsp.  A public interface for that translation may be available in a later version.
+Using other functions contained in the library to directly read or write specific types of nals or parts thereof is not part of the public API, although it is not hard to do if you prepare the required bs_t argument.  Please also note that using *_rbsp functions requires you also to perform handle RBSP to NAL (and vice versa) translation by calling rbsp_to_nal and nal_to_rbsp.
 
 
 == Programming Notes ==
