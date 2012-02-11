@@ -113,7 +113,7 @@ typedef struct
         int bitstream_restriction_flag;
           int motion_vectors_over_pic_boundaries_flag;
           int max_bytes_per_pic_denom;
-          int max_bits_per_mb_denom;
+          int max_bs_per_mb_denom;
           int log2_max_mv_length_horizontal;
           int log2_max_mv_length_vertical;
           int num_reorder_frames;
@@ -373,54 +373,54 @@ int nal_to_rbsp(uint8_t* nal_buf, int nal_size, uint8_t* rbsp_buf, int rbsp_size
 int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size);
 int read_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int size, slice_data_rbsp_t* slice_data);
 
-void read_seq_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b);
-void read_scaling_list(bit_shifter_t* b, int* scalingList, int sizeOfScalingList, int useDefaultScalingMatrixFlag );
-void read_vui_parameters(h264_stream_t* h, bit_shifter_t* b);
-void read_hrd_parameters(h264_stream_t* h, bit_shifter_t* b);
+void read_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b);
+void read_scaling_list(bs_t* b, int* scalingList, int sizeOfScalingList, int useDefaultScalingMatrixFlag );
+void read_vui_parameters(h264_stream_t* h, bs_t* b);
+void read_hrd_parameters(h264_stream_t* h, bs_t* b);
 
-void read_pic_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b);
+void read_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b);
 
-void read_sei_rbsp(h264_stream_t* h, bit_shifter_t* b);
-void read_sei_message(h264_stream_t* h, bit_shifter_t* b);
-void read_access_unit_delimiter_rbsp(h264_stream_t* h, bit_shifter_t* b);
-void read_end_of_seq_rbsp(h264_stream_t* h, bit_shifter_t* b);
-void read_end_of_stream_rbsp(h264_stream_t* h, bit_shifter_t* b);
-void read_filler_data_rbsp(h264_stream_t* h, bit_shifter_t* b);
+void read_sei_rbsp(h264_stream_t* h, bs_t* b);
+void read_sei_message(h264_stream_t* h, bs_t* b);
+void read_access_unit_delimiter_rbsp(h264_stream_t* h, bs_t* b);
+void read_end_of_seq_rbsp(h264_stream_t* h, bs_t* b);
+void read_end_of_stream_rbsp(h264_stream_t* h, bs_t* b);
+void read_filler_data_rbsp(h264_stream_t* h, bs_t* b);
 
-void read_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data, bit_shifter_t* b);
-void read_rbsp_slice_trailing_bits(h264_stream_t* h, bit_shifter_t* b);
-void read_rbsp_trailing_bits( bit_shifter_t* b );
-void read_slice_header(h264_stream_t* h, bit_shifter_t* b);
-void read_ref_pic_list_reordering(h264_stream_t* h, bit_shifter_t* b);
-void read_pred_weight_table(h264_stream_t* h, bit_shifter_t* b);
-void read_dec_ref_pic_marking(h264_stream_t* h, bit_shifter_t* b);
+void read_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data, bs_t* b);
+void read_rbsp_slice_trailing_bits(h264_stream_t* h, bs_t* b);
+void read_rbsp_trailing_bits( bs_t* b );
+void read_slice_header(h264_stream_t* h, bs_t* b);
+void read_ref_pic_list_reordering(h264_stream_t* h, bs_t* b);
+void read_pred_weight_table(h264_stream_t* h, bs_t* b);
+void read_dec_ref_pic_marking(h264_stream_t* h, bs_t* b);
 
-int more_rbsp_trailing_data(h264_stream_t* h, bit_shifter_t* b);
+int more_rbsp_trailing_data(h264_stream_t* h, bs_t* b);
 
 int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size);
 int write_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int size, slice_data_rbsp_t* slice_data);
 
-void write_seq_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b);
-void write_scaling_list(bit_shifter_t* b, int* scalingList, int sizeOfScalingList, int useDefaultScalingMatrixFlag );
-void write_vui_parameters(h264_stream_t* h, bit_shifter_t* b);
-void write_hrd_parameters(h264_stream_t* h, bit_shifter_t* b);
+void write_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b);
+void write_scaling_list(bs_t* b, int* scalingList, int sizeOfScalingList, int useDefaultScalingMatrixFlag );
+void write_vui_parameters(h264_stream_t* h, bs_t* b);
+void write_hrd_parameters(h264_stream_t* h, bs_t* b);
 
-void write_pic_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b);
+void write_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b);
 
-void write_sei_rbsp(h264_stream_t* h, bit_shifter_t* b);
-void write_sei_message(h264_stream_t* h, bit_shifter_t* b);
-void write_access_unit_delimiter_rbsp(h264_stream_t* h, bit_shifter_t* b);
-void write_end_of_seq_rbsp(h264_stream_t* h, bit_shifter_t* b);
-void write_end_of_stream_rbsp(h264_stream_t* h, bit_shifter_t* b);
-void write_filler_data_rbsp(h264_stream_t* h, bit_shifter_t* b);
+void write_sei_rbsp(h264_stream_t* h, bs_t* b);
+void write_sei_message(h264_stream_t* h, bs_t* b);
+void write_access_unit_delimiter_rbsp(h264_stream_t* h, bs_t* b);
+void write_end_of_seq_rbsp(h264_stream_t* h, bs_t* b);
+void write_end_of_stream_rbsp(h264_stream_t* h, bs_t* b);
+void write_filler_data_rbsp(h264_stream_t* h, bs_t* b);
 
-void write_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data, bit_shifter_t* b);
-void write_rbsp_slice_trailing_bits(h264_stream_t* h, bit_shifter_t* b);
-void write_rbsp_trailing_bits(h264_stream_t* h, bit_shifter_t* b);
-void write_slice_header(h264_stream_t* h, bit_shifter_t* b);
-void write_ref_pic_list_reordering(h264_stream_t* h, bit_shifter_t* b);
-void write_pred_weight_table(h264_stream_t* h, bit_shifter_t* b);
-void write_dec_ref_pic_marking(h264_stream_t* h, bit_shifter_t* b);
+void write_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data, bs_t* b);
+void write_rbsp_slice_trailing_bits(h264_stream_t* h, bs_t* b);
+void write_rbsp_trailing_bits(h264_stream_t* h, bs_t* b);
+void write_slice_header(h264_stream_t* h, bs_t* b);
+void write_ref_pic_list_reordering(h264_stream_t* h, bs_t* b);
+void write_pred_weight_table(h264_stream_t* h, bs_t* b);
+void write_dec_ref_pic_marking(h264_stream_t* h, bs_t* b);
 
 void debug_sps(sps_t* sps);
 void debug_pps(pps_t* pps);
@@ -429,8 +429,8 @@ void debug_nal(h264_stream_t* h, nal_t* nal);
 
 void debug_bytes(uint8_t* buf, int len);
 
-void read_sei_payload( h264_stream_t* h, bit_shifter_t* b, int payloadType, int payloadSize);
-void write_sei_payload( h264_stream_t* h, bit_shifter_t* b, int payloadType, int payloadSize);
+void read_sei_payload( h264_stream_t* h, bs_t* b, int payloadType, int payloadSize);
+void write_sei_payload( h264_stream_t* h, bs_t* b, int payloadType, int payloadSize);
 
 //Table 7-1 NAL unit type codes
 #define NAL_UNIT_TYPE_UNSPECIFIED                    0    // Unspecified

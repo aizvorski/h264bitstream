@@ -146,17 +146,17 @@ int find_nal_unit(uint8_t* buf, int size, int* nal_start, int* nal_end)
 }
 
 
-// int more_rbsp_data(h264_stream_t* h, bit_shifter_t* b) { return !bits_eof(b); }
+// int more_rbsp_data(h264_stream_t* h, bs_t* b) { return !bs_eof(b); }
 
-int more_rbsp_data(h264_stream_t* h, bit_shifter_t* b) 
+int more_rbsp_data(h264_stream_t* h, bs_t* b) 
 {
-    if ( bits_eof(b) ) return 0;    
-    return(!!( bits_peek_u1(b) == 0 )); // if next bit is 1, we've reached the stop bit...
+    if ( bs_eof(b) ) return 0;    
+    return(!!( bs_peek_u1(b) == 0 )); // if next bit is 1, we've reached the stop bit...
 }
 
-uint32_t next_bits(bit_shifter_t* b, int n) 
+uint32_t next_bits(bs_t* b, int n) 
 {
-    return bits_next_bits( b, n ); 
+    return bs_next_bits( b, n ); 
 } 
 
 /**
@@ -263,23 +263,23 @@ int read_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int nal_size, slice_data_
 {
     nal_t* nal = h->nal;
 
-    bit_shifter_t bit_shifter;
+    bs_t bs;
 
-    bit_shifter_t* b = bits_init(&bit_shifter, buf, nal_size);
+    bs_t* b = bs_init(&bs, buf, nal_size);
 
-    nal->forbidden_zero_bit = bits_read_f(b,1);
-    nal->nal_ref_idc = bits_read_u(b,2);
-    nal->nal_unit_type = bits_read_u(b,5);
+    nal->forbidden_zero_bit = bs_read_f(b,1);
+    nal->nal_ref_idc = bs_read_u(b,2);
+    nal->nal_unit_type = bs_read_u(b,5);
     nal->parsed = NULL;
     nal->sizeof_parsed = 0;
 
-  //  bits_free(b); -- not needed, using stack allocation
+  //  bs_free(b); -- not needed, using stack allocation
 
     // uint8_t* rbsp_buf = (uint8_t*)malloc(nal_size);
     uint8_t rbsp_buf[nal_size];
 
     int rbsp_size = nal_to_rbsp(buf + 1, nal_size - 1, rbsp_buf, nal_size);
-    b = bits_init( &bit_shifter, rbsp_buf, rbsp_size);
+    b = bs_init( &bs, rbsp_buf, rbsp_size);
 
     switch ( nal->nal_unit_type )
     {
@@ -336,7 +336,7 @@ int read_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int nal_size, slice_data_
     }
 
     // TODO check for eof/read-beyond-end
-    // bits_free(b); -- not needed if we use stack allocation
+    // bs_free(b); -- not needed if we use stack allocation
 
     // free( rbsp_buf ); -- not needed if we use stack allocation
 
@@ -345,18 +345,18 @@ int read_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int nal_size, slice_data_
 
 
 //7.3.2.1 Sequence parameter set RBSP syntax
-void read_seq_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b)
+void read_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
 {
     int i;
 
-    int profile_idc = bits_read_u8(b);
-    int constraint_set0_flag = bits_read_u1(b);
-    int constraint_set1_flag = bits_read_u1(b);
-    int constraint_set2_flag = bits_read_u1(b);
-    int constraint_set3_flag = bits_read_u1(b);
-    int reserved_zero_4bits  = bits_read_u(b,4);  /* all 0's */
-    int level_idc = bits_read_u8(b);
-    int seq_parameter_set_id = bits_read_ue(b);
+    int profile_idc = bs_read_u8(b);
+    int constraint_set0_flag = bs_read_u1(b);
+    int constraint_set1_flag = bs_read_u1(b);
+    int constraint_set2_flag = bs_read_u1(b);
+    int constraint_set3_flag = bs_read_u1(b);
+    int reserved_zero_4bits  = bs_read_u(b,4);  /* all 0's */
+    int level_idc = bs_read_u8(b);
+    int seq_parameter_set_id = bs_read_ue(b);
 
     // select the correct sps
     h->sps = h->sps_table[seq_parameter_set_id];
@@ -365,31 +365,31 @@ void read_seq_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b)
     
     sps->chroma_format_idc = 1; 
 
-    sps->profile_idc = profile_idc; // bits_read_u8(b);
-    sps->constraint_set0_flag = constraint_set0_flag;//bits_read_u1(b);
-    sps->constraint_set1_flag = constraint_set1_flag;//bits_read_u1(b);
-    sps->constraint_set2_flag = constraint_set2_flag;//bits_read_u1(b);
-    sps->constraint_set3_flag = constraint_set3_flag;//bits_read_u1(b);
-    sps->reserved_zero_4bits = reserved_zero_4bits;//bits_read_u(b,4);  /* all 0's */
-    sps->level_idc = level_idc; //bits_read_u8(b);
-    sps->seq_parameter_set_id = seq_parameter_set_id; // bits_read_ue(b);
+    sps->profile_idc = profile_idc; // bs_read_u8(b);
+    sps->constraint_set0_flag = constraint_set0_flag;//bs_read_u1(b);
+    sps->constraint_set1_flag = constraint_set1_flag;//bs_read_u1(b);
+    sps->constraint_set2_flag = constraint_set2_flag;//bs_read_u1(b);
+    sps->constraint_set3_flag = constraint_set3_flag;//bs_read_u1(b);
+    sps->reserved_zero_4bits = reserved_zero_4bits;//bs_read_u(b,4);  /* all 0's */
+    sps->level_idc = level_idc; //bs_read_u8(b);
+    sps->seq_parameter_set_id = seq_parameter_set_id; // bs_read_ue(b);
     if( sps->profile_idc == 100 || sps->profile_idc == 110 ||
         sps->profile_idc == 122 || sps->profile_idc == 144 )
     {
-        sps->chroma_format_idc = bits_read_ue(b);
+        sps->chroma_format_idc = bs_read_ue(b);
         if( sps->chroma_format_idc == 3 )
         {
-            sps->residual_colour_transform_flag = bits_read_u1(b);
+            sps->residual_colour_transform_flag = bs_read_u1(b);
         }
-        sps->bit_depth_luma_minus8 = bits_read_ue(b);
-        sps->bit_depth_chroma_minus8 = bits_read_ue(b);
-        sps->qpprime_y_zero_transform_bypass_flag = bits_read_u1(b);
-        sps->seq_scaling_matrix_present_flag = bits_read_u1(b);
+        sps->bit_depth_luma_minus8 = bs_read_ue(b);
+        sps->bit_depth_chroma_minus8 = bs_read_ue(b);
+        sps->qpprime_y_zero_transform_bypass_flag = bs_read_u1(b);
+        sps->seq_scaling_matrix_present_flag = bs_read_u1(b);
         if( sps->seq_scaling_matrix_present_flag )
         {
             for( i = 0; i < 8; i++ )
             {
-                sps->seq_scaling_list_present_flag[ i ] = bits_read_u1(b);
+                sps->seq_scaling_list_present_flag[ i ] = bs_read_u1(b);
                 if( sps->seq_scaling_list_present_flag[ i ] )
                 {
                     if( i < 6 )
@@ -406,42 +406,42 @@ void read_seq_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b)
             }
         }
     }
-    sps->log2_max_frame_num_minus4 = bits_read_ue(b);
-    sps->pic_order_cnt_type = bits_read_ue(b);
+    sps->log2_max_frame_num_minus4 = bs_read_ue(b);
+    sps->pic_order_cnt_type = bs_read_ue(b);
     if( sps->pic_order_cnt_type == 0 )
     {
-        sps->log2_max_pic_order_cnt_lsb_minus4 = bits_read_ue(b);
+        sps->log2_max_pic_order_cnt_lsb_minus4 = bs_read_ue(b);
     }
     else if( sps->pic_order_cnt_type == 1 )
     {
-        sps->delta_pic_order_always_zero_flag = bits_read_u1(b);
-        sps->offset_for_non_ref_pic = bits_read_se(b);
-        sps->offset_for_top_to_bottom_field = bits_read_se(b);
-        sps->num_ref_frames_in_pic_order_cnt_cycle = bits_read_ue(b);
+        sps->delta_pic_order_always_zero_flag = bs_read_u1(b);
+        sps->offset_for_non_ref_pic = bs_read_se(b);
+        sps->offset_for_top_to_bottom_field = bs_read_se(b);
+        sps->num_ref_frames_in_pic_order_cnt_cycle = bs_read_ue(b);
         for( i = 0; i < sps->num_ref_frames_in_pic_order_cnt_cycle; i++ )
         {
-            sps->offset_for_ref_frame[ i ] = bits_read_se(b);
+            sps->offset_for_ref_frame[ i ] = bs_read_se(b);
         }
     }
-    sps->num_ref_frames = bits_read_ue(b);
-    sps->gaps_in_frame_num_value_allowed_flag = bits_read_u1(b);
-    sps->pic_width_in_mbs_minus1 = bits_read_ue(b);
-    sps->pic_height_in_map_units_minus1 = bits_read_ue(b);
-    sps->frame_mbs_only_flag = bits_read_u1(b);
+    sps->num_ref_frames = bs_read_ue(b);
+    sps->gaps_in_frame_num_value_allowed_flag = bs_read_u1(b);
+    sps->pic_width_in_mbs_minus1 = bs_read_ue(b);
+    sps->pic_height_in_map_units_minus1 = bs_read_ue(b);
+    sps->frame_mbs_only_flag = bs_read_u1(b);
     if( !sps->frame_mbs_only_flag )
     {
-        sps->mb_adaptive_frame_field_flag = bits_read_u1(b);
+        sps->mb_adaptive_frame_field_flag = bs_read_u1(b);
     }
-    sps->direct_8x8_inference_flag = bits_read_u1(b);
-    sps->frame_cropping_flag = bits_read_u1(b);
+    sps->direct_8x8_inference_flag = bs_read_u1(b);
+    sps->frame_cropping_flag = bs_read_u1(b);
     if( sps->frame_cropping_flag )
     {
-        sps->frame_crop_left_offset = bits_read_ue(b);
-        sps->frame_crop_right_offset = bits_read_ue(b);
-        sps->frame_crop_top_offset = bits_read_ue(b);
-        sps->frame_crop_bottom_offset = bits_read_ue(b);
+        sps->frame_crop_left_offset = bs_read_ue(b);
+        sps->frame_crop_right_offset = bs_read_ue(b);
+        sps->frame_crop_top_offset = bs_read_ue(b);
+        sps->frame_crop_bottom_offset = bs_read_ue(b);
     }
-    sps->vui_parameters_present_flag = bits_read_u1(b);
+    sps->vui_parameters_present_flag = bs_read_u1(b);
     if( sps->vui_parameters_present_flag )
     {
         read_vui_parameters(h, b);
@@ -453,7 +453,7 @@ void read_seq_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b)
 
 
 //7.3.2.1.1 Scaling list syntax
-void read_scaling_list(bit_shifter_t* b, int* scalingList, int sizeOfScalingList, int useDefaultScalingMatrixFlag )
+void read_scaling_list(bs_t* b, int* scalingList, int sizeOfScalingList, int useDefaultScalingMatrixFlag )
 {
     int j;
     if(!scalingList)
@@ -467,7 +467,7 @@ void read_scaling_list(bit_shifter_t* b, int* scalingList, int sizeOfScalingList
     {
         if( nextScale != 0 )
         {
-            int delta_scale = bits_read_se(b);
+            int delta_scale = bs_read_se(b);
             nextScale = ( lastScale + delta_scale + 256 ) % 256;
             useDefaultScalingMatrixFlag = ( j == 0 && nextScale == 0 );
         }
@@ -477,123 +477,123 @@ void read_scaling_list(bit_shifter_t* b, int* scalingList, int sizeOfScalingList
 }
 
 //Appendix E.1.1 VUI parameters syntax
-void read_vui_parameters(h264_stream_t* h, bit_shifter_t* b)
+void read_vui_parameters(h264_stream_t* h, bs_t* b)
 {
     sps_t* sps = h->sps;
 
-    sps->vui.aspect_ratio_info_present_flag = bits_read_u1(b);
+    sps->vui.aspect_ratio_info_present_flag = bs_read_u1(b);
     if( sps->vui.aspect_ratio_info_present_flag )
     {
-        sps->vui.aspect_ratio_idc = bits_read_u8(b);
+        sps->vui.aspect_ratio_idc = bs_read_u8(b);
         if( sps->vui.aspect_ratio_idc == SAR_Extended )
         {
-            sps->vui.sar_width = bits_read_u(b,16);
-            sps->vui.sar_height = bits_read_u(b,16);
+            sps->vui.sar_width = bs_read_u(b,16);
+            sps->vui.sar_height = bs_read_u(b,16);
         }
     }
-    sps->vui.overscan_info_present_flag = bits_read_u1(b);
+    sps->vui.overscan_info_present_flag = bs_read_u1(b);
     if( sps->vui.overscan_info_present_flag )
     {
-        sps->vui.overscan_appropriate_flag = bits_read_u1(b);
+        sps->vui.overscan_appropriate_flag = bs_read_u1(b);
     }
-    sps->vui.video_signal_type_present_flag = bits_read_u1(b);
+    sps->vui.video_signal_type_present_flag = bs_read_u1(b);
     if( sps->vui.video_signal_type_present_flag )
     {
-        sps->vui.video_format = bits_read_u(b,3);
-        sps->vui.video_full_range_flag = bits_read_u1(b);
-        sps->vui.colour_description_present_flag = bits_read_u1(b);
+        sps->vui.video_format = bs_read_u(b,3);
+        sps->vui.video_full_range_flag = bs_read_u1(b);
+        sps->vui.colour_description_present_flag = bs_read_u1(b);
         if( sps->vui.colour_description_present_flag )
         {
-            sps->vui.colour_primaries = bits_read_u8(b);
-            sps->vui.transfer_characteristics = bits_read_u8(b);
-            sps->vui.matrix_coefficients = bits_read_u8(b);
+            sps->vui.colour_primaries = bs_read_u8(b);
+            sps->vui.transfer_characteristics = bs_read_u8(b);
+            sps->vui.matrix_coefficients = bs_read_u8(b);
         }
     }
-    sps->vui.chroma_loc_info_present_flag = bits_read_u1(b);
+    sps->vui.chroma_loc_info_present_flag = bs_read_u1(b);
     if( sps->vui.chroma_loc_info_present_flag )
     {
-        sps->vui.chroma_sample_loc_type_top_field = bits_read_ue(b);
-        sps->vui.chroma_sample_loc_type_bottom_field = bits_read_ue(b);
+        sps->vui.chroma_sample_loc_type_top_field = bs_read_ue(b);
+        sps->vui.chroma_sample_loc_type_bottom_field = bs_read_ue(b);
     }
-    sps->vui.timing_info_present_flag = bits_read_u1(b);
+    sps->vui.timing_info_present_flag = bs_read_u1(b);
     if( sps->vui.timing_info_present_flag )
     {
-        sps->vui.num_units_in_tick = bits_read_u(b,32);
-        sps->vui.time_scale = bits_read_u(b,32);
-        sps->vui.fixed_frame_rate_flag = bits_read_u1(b);
+        sps->vui.num_units_in_tick = bs_read_u(b,32);
+        sps->vui.time_scale = bs_read_u(b,32);
+        sps->vui.fixed_frame_rate_flag = bs_read_u1(b);
     }
-    sps->vui.nal_hrd_parameters_present_flag = bits_read_u1(b);
+    sps->vui.nal_hrd_parameters_present_flag = bs_read_u1(b);
     if( sps->vui.nal_hrd_parameters_present_flag )
     {
         read_hrd_parameters(h, b);
     }
-    sps->vui.vcl_hrd_parameters_present_flag = bits_read_u1(b);
+    sps->vui.vcl_hrd_parameters_present_flag = bs_read_u1(b);
     if( sps->vui.vcl_hrd_parameters_present_flag )
     {
         read_hrd_parameters(h, b);
     }
     if( sps->vui.nal_hrd_parameters_present_flag || sps->vui.vcl_hrd_parameters_present_flag )
     {
-        sps->vui.low_delay_hrd_flag = bits_read_u1(b);
+        sps->vui.low_delay_hrd_flag = bs_read_u1(b);
     }
-    sps->vui.pic_struct_present_flag = bits_read_u1(b);
-    sps->vui.bitstream_restriction_flag = bits_read_u1(b);
+    sps->vui.pic_struct_present_flag = bs_read_u1(b);
+    sps->vui.bitstream_restriction_flag = bs_read_u1(b);
     if( sps->vui.bitstream_restriction_flag )
     {
-        sps->vui.motion_vectors_over_pic_boundaries_flag = bits_read_u1(b);
-        sps->vui.max_bytes_per_pic_denom = bits_read_ue(b);
-        sps->vui.max_bits_per_mb_denom = bits_read_ue(b);
-        sps->vui.log2_max_mv_length_horizontal = bits_read_ue(b);
-        sps->vui.log2_max_mv_length_vertical = bits_read_ue(b);
-        sps->vui.num_reorder_frames = bits_read_ue(b);
-        sps->vui.max_dec_frame_buffering = bits_read_ue(b);
+        sps->vui.motion_vectors_over_pic_boundaries_flag = bs_read_u1(b);
+        sps->vui.max_bytes_per_pic_denom = bs_read_ue(b);
+        sps->vui.max_bs_per_mb_denom = bs_read_ue(b);
+        sps->vui.log2_max_mv_length_horizontal = bs_read_ue(b);
+        sps->vui.log2_max_mv_length_vertical = bs_read_ue(b);
+        sps->vui.num_reorder_frames = bs_read_ue(b);
+        sps->vui.max_dec_frame_buffering = bs_read_ue(b);
     }
 }
 
 
 //Appendix E.1.2 HRD parameters syntax
-void read_hrd_parameters(h264_stream_t* h, bit_shifter_t* b)
+void read_hrd_parameters(h264_stream_t* h, bs_t* b)
 {
     sps_t* sps = h->sps;
     int SchedSelIdx;
 
-    sps->hrd.cpb_cnt_minus1 = bits_read_ue(b);
-    sps->hrd.bit_rate_scale = bits_read_u(b,4);
-    sps->hrd.cpb_size_scale = bits_read_u(b,4);
+    sps->hrd.cpb_cnt_minus1 = bs_read_ue(b);
+    sps->hrd.bit_rate_scale = bs_read_u(b,4);
+    sps->hrd.cpb_size_scale = bs_read_u(b,4);
     for( SchedSelIdx = 0; SchedSelIdx <= sps->hrd.cpb_cnt_minus1; SchedSelIdx++ )
     {
-        sps->hrd.bit_rate_value_minus1[ SchedSelIdx ] = bits_read_ue(b);
-        sps->hrd.cpb_size_value_minus1[ SchedSelIdx ] = bits_read_ue(b);
-        sps->hrd.cbr_flag[ SchedSelIdx ] = bits_read_u1(b);
+        sps->hrd.bit_rate_value_minus1[ SchedSelIdx ] = bs_read_ue(b);
+        sps->hrd.cpb_size_value_minus1[ SchedSelIdx ] = bs_read_ue(b);
+        sps->hrd.cbr_flag[ SchedSelIdx ] = bs_read_u1(b);
     }
-    sps->hrd.initial_cpb_removal_delay_length_minus1 = bits_read_u(b,5);
-    sps->hrd.cpb_removal_delay_length_minus1 = bits_read_u(b,5);
-    sps->hrd.dpb_output_delay_length_minus1 = bits_read_u(b,5);
-    sps->hrd.time_offset_length = bits_read_u(b,5);
+    sps->hrd.initial_cpb_removal_delay_length_minus1 = bs_read_u(b,5);
+    sps->hrd.cpb_removal_delay_length_minus1 = bs_read_u(b,5);
+    sps->hrd.dpb_output_delay_length_minus1 = bs_read_u(b,5);
+    sps->hrd.time_offset_length = bs_read_u(b,5);
 }
 
 
 /*
 UNIMPLEMENTED
 //7.3.2.1.2 Sequence parameter set extension RBSP syntax
-int read_seq_parameter_set_extension_rbsp(bit_shifter_t* b, sps_ext_t* sps_ext) {
-    seq_parameter_set_id = bits_read_ue(b);
-    aux_format_idc = bits_read_ue(b);
+int read_seq_parameter_set_extension_rbsp(bs_t* b, sps_ext_t* sps_ext) {
+    seq_parameter_set_id = bs_read_ue(b);
+    aux_format_idc = bs_read_ue(b);
     if( aux_format_idc != 0 ) {
-        bit_depth_aux_minus8 = bits_read_ue(b);
-        alpha_incr_flag = bits_read_u1(b);
-        alpha_opaque_value = bits_read_u(v);
-        alpha_transparent_value = bits_read_u(v);
+        bit_depth_aux_minus8 = bs_read_ue(b);
+        alpha_incr_flag = bs_read_u1(b);
+        alpha_opaque_value = bs_read_u(v);
+        alpha_transparent_value = bs_read_u(v);
     }
-    additional_extension_flag = bits_read_u1(b);
+    additional_extension_flag = bs_read_u1(b);
     read_rbsp_trailing_bits();
 }
 */
 
 //7.3.2.2 Picture parameter set RBSP syntax
-void read_pic_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b)
+void read_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
 {
-    int pps_id = bits_read_ue(b);
+    int pps_id = bs_read_ue(b);
     pps_t* pps = h->pps = h->pps_table[pps_id] ;
 
     memset(pps, 0, sizeof(pps_t));
@@ -602,66 +602,66 @@ void read_pic_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b)
     int i_group;
 
     pps->pic_parameter_set_id = pps_id;
-    pps->seq_parameter_set_id = bits_read_ue(b);
-    pps->entropy_coding_mode_flag = bits_read_u1(b);
-    pps->pic_order_present_flag = bits_read_u1(b);
-    pps->num_slice_groups_minus1 = bits_read_ue(b);
+    pps->seq_parameter_set_id = bs_read_ue(b);
+    pps->entropy_coding_mode_flag = bs_read_u1(b);
+    pps->pic_order_present_flag = bs_read_u1(b);
+    pps->num_slice_groups_minus1 = bs_read_ue(b);
 
     if( pps->num_slice_groups_minus1 > 0 )
     {        
-        pps->slice_group_map_type = bits_read_ue(b);
+        pps->slice_group_map_type = bs_read_ue(b);
         if( pps->slice_group_map_type == 0 )
         {
             for( i_group = 0; i_group <= pps->num_slice_groups_minus1; i_group++ )
             {
-                pps->run_length_minus1[ i_group ] = bits_read_ue(b);
+                pps->run_length_minus1[ i_group ] = bs_read_ue(b);
             }
         }
         else if( pps->slice_group_map_type == 2 )
         {
             for( i_group = 0; i_group < pps->num_slice_groups_minus1; i_group++ )
             {
-                pps->top_left[ i_group ] = bits_read_ue(b);
-                pps->bottom_right[ i_group ] = bits_read_ue(b);
+                pps->top_left[ i_group ] = bs_read_ue(b);
+                pps->bottom_right[ i_group ] = bs_read_ue(b);
             }
         }
         else if( pps->slice_group_map_type == 3 ||
                  pps->slice_group_map_type == 4 ||
                  pps->slice_group_map_type == 5 )
         {
-            pps->slice_group_change_direction_flag = bits_read_u1(b);
-            pps->slice_group_change_rate_minus1 = bits_read_ue(b);
+            pps->slice_group_change_direction_flag = bs_read_u1(b);
+            pps->slice_group_change_rate_minus1 = bs_read_ue(b);
         }
         else if( pps->slice_group_map_type == 6 )
         {
-            pps->pic_size_in_map_units_minus1 = bits_read_ue(b);
+            pps->pic_size_in_map_units_minus1 = bs_read_ue(b);
             for( i = 0; i <= pps->pic_size_in_map_units_minus1; i++ )
             {
-                pps->slice_group_id[ i ] = bits_read_u(b, ceil( log2( pps->num_slice_groups_minus1 + 1 ) ) ); // was u(v)
+                pps->slice_group_id[ i ] = bs_read_u(b, ceil( log2( pps->num_slice_groups_minus1 + 1 ) ) ); // was u(v)
             }
         }
     }
-    pps->num_ref_idx_l0_active_minus1 = bits_read_ue(b);
-    pps->num_ref_idx_l1_active_minus1 = bits_read_ue(b);
-    pps->weighted_pred_flag = bits_read_u1(b);
-    pps->weighted_bipred_idc = bits_read_u(b,2);
-    pps->pic_init_qp_minus26 = bits_read_se(b);
-    pps->pic_init_qs_minus26 = bits_read_se(b);
-    pps->chroma_qp_index_offset = bits_read_se(b);
-    pps->deblocking_filter_control_present_flag = bits_read_u1(b);
-    pps->constrained_intra_pred_flag = bits_read_u1(b);
-    pps->redundant_pic_cnt_present_flag = bits_read_u1(b);
+    pps->num_ref_idx_l0_active_minus1 = bs_read_ue(b);
+    pps->num_ref_idx_l1_active_minus1 = bs_read_ue(b);
+    pps->weighted_pred_flag = bs_read_u1(b);
+    pps->weighted_bipred_idc = bs_read_u(b,2);
+    pps->pic_init_qp_minus26 = bs_read_se(b);
+    pps->pic_init_qs_minus26 = bs_read_se(b);
+    pps->chroma_qp_index_offset = bs_read_se(b);
+    pps->deblocking_filter_control_present_flag = bs_read_u1(b);
+    pps->constrained_intra_pred_flag = bs_read_u1(b);
+    pps->redundant_pic_cnt_present_flag = bs_read_u1(b);
 
     pps->_more_rbsp_data_present = more_rbsp_data(h, b);
     if( pps->_more_rbsp_data_present )
     {
-        pps->transform_8x8_mode_flag = bits_read_u1(b);
-        pps->pic_scaling_matrix_present_flag = bits_read_u1(b);
+        pps->transform_8x8_mode_flag = bs_read_u1(b);
+        pps->pic_scaling_matrix_present_flag = bs_read_u1(b);
         if( pps->pic_scaling_matrix_present_flag )
         {
             for( i = 0; i < 6 + 2* pps->transform_8x8_mode_flag; i++ )
             {
-                pps->pic_scaling_list_present_flag[ i ] = bits_read_u1(b);
+                pps->pic_scaling_list_present_flag[ i ] = bs_read_u1(b);
                 if( pps->pic_scaling_list_present_flag[ i ] )
                 {
                     if( i < 6 )
@@ -677,13 +677,13 @@ void read_pic_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b)
                 }
             }
         }
-        pps->second_chroma_qp_index_offset = bits_read_se(b);
+        pps->second_chroma_qp_index_offset = bs_read_se(b);
     }
     read_rbsp_trailing_bits( b );
 }
 
 //7.3.2.3 Supplemental enhancement information RBSP syntax
-void read_sei_rbsp(h264_stream_t* h, bit_shifter_t* b)
+void read_sei_rbsp(h264_stream_t* h, bs_t* b)
 {
     int i;
     for (i = 0; i < h->num_seis; i++)
@@ -702,20 +702,20 @@ void read_sei_rbsp(h264_stream_t* h, bit_shifter_t* b)
     read_rbsp_trailing_bits( b );
 }
 
-int _read_ff_coded_number(bit_shifter_t* b)
+int _read_ff_coded_number(bs_t* b)
 {
     int n1 = 0;
     int n2;
     do
     {
-        n2 = bits_read_u8(b);
+        n2 = bs_read_u8(b);
         n1 += n2;
     } while (n2 == 0xff);
     return n1;
 }
 
 //7.3.2.3.1 Supplemental enhancement information message syntax
-void read_sei_message(h264_stream_t* h, bit_shifter_t* b)
+void read_sei_message(h264_stream_t* h, bs_t* b)
 {
     h->sei->payloadType = _read_ff_coded_number(b);
     h->sei->payloadSize = _read_ff_coded_number(b);
@@ -723,34 +723,34 @@ void read_sei_message(h264_stream_t* h, bit_shifter_t* b)
 }
 
 //7.3.2.4 Access unit delimiter RBSP syntax
-void read_access_unit_delimiter_rbsp(h264_stream_t* h, bit_shifter_t* b)
+void read_access_unit_delimiter_rbsp(h264_stream_t* h, bs_t* b)
 {
-    h->aud->primary_pic_type = bits_read_u(b,3);
+    h->aud->primary_pic_type = bs_read_u(b,3);
     read_rbsp_trailing_bits( b );
 }
 
 //7.3.2.5 End of sequence RBSP syntax
-void read_end_of_seq_rbsp(h264_stream_t* h, bit_shifter_t* b)
+void read_end_of_seq_rbsp(h264_stream_t* h, bs_t* b)
 {
 }
 
 //7.3.2.6 End of stream RBSP syntax
-void read_end_of_stream_rbsp(h264_stream_t* h, bit_shifter_t* b)
+void read_end_of_stream_rbsp(h264_stream_t* h, bs_t* b)
 {
 }
 
 //7.3.2.7 Filler data RBSP syntax
-void read_filler_data_rbsp(h264_stream_t* h, bit_shifter_t* b)
+void read_filler_data_rbsp(h264_stream_t* h, bs_t* b)
 {
     while( next_bits(b, 8) == 0xFF )
     {
-        int ff_byte = bits_read_f(b,8);  // equal to 0xFF
+        int ff_byte = bs_read_f(b,8);  // equal to 0xFF
     }
     read_rbsp_trailing_bits( b );
 }
 
 //7.3.2.8 Slice layer without partitioning RBSP syntax
-void read_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data,  bit_shifter_t* b)
+void read_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data,  bs_t* b)
 {
     read_slice_header(h, b);
     if ( slice_data != NULL )
@@ -775,35 +775,35 @@ void read_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data,  bit
 //7.3.2.9.1 Slice data partition A RBSP syntax
 slice_data_partition_a_layer_rbsp( ) {
     read_slice_header( );             // only category 2
-    slice_id = bits_read_ue(b)
+    slice_id = bs_read_ue(b)
     read_slice_data( );               // only category 2
     read_rbsp_slice_trailing_bits( ); // only category 2
 }
 
 //7.3.2.9.2 Slice data partition B RBSP syntax
 slice_data_partition_b_layer_rbsp( ) {
-    slice_id = bits_read_ue(b);    // only category 3
+    slice_id = bs_read_ue(b);    // only category 3
     if( redundant_pic_cnt_present_flag )
-        redundant_pic_cnt = bits_read_ue(b);
+        redundant_pic_cnt = bs_read_ue(b);
     read_slice_data( );               // only category 3
     read_rbsp_slice_trailing_bits( ); // only category 3
 }
 
 //7.3.2.9.3 Slice data partition C RBSP syntax
 slice_data_partition_c_layer_rbsp( ) {
-    slice_id = bits_read_ue(b);    // only category 4
+    slice_id = bs_read_ue(b);    // only category 4
     if( redundant_pic_cnt_present_flag )
-        redundant_pic_cnt = bits_read_ue(b);
+        redundant_pic_cnt = bs_read_ue(b);
     read_slice_data( );               // only category 4
     rbsp_slice_trailing_bits( ); // only category 4
 }
 */
 
 int
-more_rbsp_trailing_data(h264_stream_t* h, bit_shifter_t* b) { return !bits_eof(b); }
+more_rbsp_trailing_data(h264_stream_t* h, bs_t* b) { return !bs_eof(b); }
 
 //7.3.2.10 RBSP slice trailing bits syntax
-void read_rbsp_slice_trailing_bits(h264_stream_t* h, bit_shifter_t* b)
+void read_rbsp_slice_trailing_bits(h264_stream_t* h, bs_t* b)
 {
     read_rbsp_trailing_bits( b );
     int cabac_zero_word;
@@ -811,24 +811,24 @@ void read_rbsp_slice_trailing_bits(h264_stream_t* h, bit_shifter_t* b)
     {
         while( more_rbsp_trailing_data(h, b) )
         {
-            cabac_zero_word = bits_read_f(b,16); // equal to 0x0000
+            cabac_zero_word = bs_read_f(b,16); // equal to 0x0000
         }
     }
 }
 
 //7.3.2.11 RBSP trailing bits syntax
-void read_rbsp_trailing_bits( bit_shifter_t* b )
+void read_rbsp_trailing_bits( bs_t* b )
 {
-    int rbsp_stop_one_bit = bits_read_u1( b ); // equal to 1
+    int rbsp_stop_one_bit = bs_read_u1( b ); // equal to 1
 
-    while( !bits_byte_aligned(b) )
+    while( !bs_byte_aligned(b) )
     {
-        int rbsp_alignment_zero_bit = bits_read_u1( b ); // equal to 0
+        int rbsp_alignment_zero_bit = bs_read_u1( b ); // equal to 0
     }
 }
 
 //7.3.3 Slice header syntax
-void read_slice_header(h264_stream_t* h, bit_shifter_t* b)
+void read_slice_header(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
     memset(sh, 0, sizeof(slice_header_t));
@@ -837,59 +837,59 @@ void read_slice_header(h264_stream_t* h, bit_shifter_t* b)
     pps_t* pps = NULL;//h->pps;
     nal_t* nal = h->nal;
 
-    sh->first_mb_in_slice = bits_read_ue(b);
-    sh->slice_type = bits_read_ue(b);
-    sh->pic_parameter_set_id = bits_read_ue(b);
+    sh->first_mb_in_slice = bs_read_ue(b);
+    sh->slice_type = bs_read_ue(b);
+    sh->pic_parameter_set_id = bs_read_ue(b);
 
     pps = h->pps = h->pps_table[sh->pic_parameter_set_id];
     sps = h->sps = h->sps_table[pps->seq_parameter_set_id];
 
-    sh->frame_num = bits_read_u(b, sps->log2_max_frame_num_minus4 + 4 ); // was u(v)
+    sh->frame_num = bs_read_u(b, sps->log2_max_frame_num_minus4 + 4 ); // was u(v)
     if( !sps->frame_mbs_only_flag )
     {
-        sh->field_pic_flag = bits_read_u1(b);
+        sh->field_pic_flag = bs_read_u1(b);
         if( sh->field_pic_flag )
         {
-            sh->bottom_field_flag = bits_read_u1(b);
+            sh->bottom_field_flag = bs_read_u1(b);
         }
     }
     if( nal->nal_unit_type == 5 )
     {
-        sh->idr_pic_id = bits_read_ue(b);
+        sh->idr_pic_id = bs_read_ue(b);
     }
     if( sps->pic_order_cnt_type == 0 )
     {
-        sh->pic_order_cnt_lsb = bits_read_u(b, sps->log2_max_pic_order_cnt_lsb_minus4 + 4 ); // was u(v)
+        sh->pic_order_cnt_lsb = bs_read_u(b, sps->log2_max_pic_order_cnt_lsb_minus4 + 4 ); // was u(v)
         if( pps->pic_order_present_flag && !sh->field_pic_flag )
         {
-            sh->delta_pic_order_cnt_bottom = bits_read_se(b);
+            sh->delta_pic_order_cnt_bottom = bs_read_se(b);
         }
     }
     if( sps->pic_order_cnt_type == 1 && !sps->delta_pic_order_always_zero_flag )
     {
-        sh->delta_pic_order_cnt[ 0 ] = bits_read_se(b);
+        sh->delta_pic_order_cnt[ 0 ] = bs_read_se(b);
         if( pps->pic_order_present_flag && !sh->field_pic_flag )
         {
-            sh->delta_pic_order_cnt[ 1 ] = bits_read_se(b);
+            sh->delta_pic_order_cnt[ 1 ] = bs_read_se(b);
         }
     }
     if( pps->redundant_pic_cnt_present_flag )
     {
-        sh->redundant_pic_cnt = bits_read_ue(b);
+        sh->redundant_pic_cnt = bs_read_ue(b);
     }
     if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
-        sh->direct_spatial_mv_pred_flag = bits_read_u1(b);
+        sh->direct_spatial_mv_pred_flag = bs_read_u1(b);
     }
     if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_P ) || is_slice_type( sh->slice_type, SH_SLICE_TYPE_SP ) || is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
-        sh->num_ref_idx_active_override_flag = bits_read_u1(b);
+        sh->num_ref_idx_active_override_flag = bs_read_u1(b);
         if( sh->num_ref_idx_active_override_flag )
         {
-            sh->num_ref_idx_l0_active_minus1 = bits_read_ue(b); // FIXME does this modify the pps?
+            sh->num_ref_idx_l0_active_minus1 = bs_read_ue(b); // FIXME does this modify the pps?
             if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
             {
-                sh->num_ref_idx_l1_active_minus1 = bits_read_ue(b);
+                sh->num_ref_idx_l1_active_minus1 = bs_read_ue(b);
             }
         }
     }
@@ -905,85 +905,85 @@ void read_slice_header(h264_stream_t* h, bit_shifter_t* b)
     }
     if( pps->entropy_coding_mode_flag && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
     {
-        sh->cabac_init_idc = bits_read_ue(b);
+        sh->cabac_init_idc = bs_read_ue(b);
     }
-    sh->slice_qp_delta = bits_read_se(b);
+    sh->slice_qp_delta = bs_read_se(b);
     if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_SP ) || is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
     {
         if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_SP ) )
         {
-            sh->sp_for_switch_flag = bits_read_u1(b);
+            sh->sp_for_switch_flag = bs_read_u1(b);
         }
-        sh->slice_qs_delta = bits_read_se(b);
+        sh->slice_qs_delta = bs_read_se(b);
     }
     if( pps->deblocking_filter_control_present_flag )
     {
-        sh->disable_deblocking_filter_idc = bits_read_ue(b);
+        sh->disable_deblocking_filter_idc = bs_read_ue(b);
         if( sh->disable_deblocking_filter_idc != 1 )
         {
-            sh->slice_alpha_c0_offset_div2 = bits_read_se(b);
-            sh->slice_beta_offset_div2 = bits_read_se(b);
+            sh->slice_alpha_c0_offset_div2 = bs_read_se(b);
+            sh->slice_beta_offset_div2 = bs_read_se(b);
         }
     }
     if( pps->num_slice_groups_minus1 > 0 &&
         pps->slice_group_map_type >= 3 && pps->slice_group_map_type <= 5)
     {
         sh->slice_group_change_cycle =
-            bits_read_u(b, ceil( log2( pps->pic_size_in_map_units_minus1 +
+            bs_read_u(b, ceil( log2( pps->pic_size_in_map_units_minus1 +
                                      pps->slice_group_change_rate_minus1 + 1 ) ) ); // was u(v) // FIXME add 2?
     }
     // bs_print_state(b);
 }
 
 //7.3.3.1 Reference picture list reordering syntax
-void read_ref_pic_list_reordering(h264_stream_t* h, bit_shifter_t* b)
+void read_ref_pic_list_reordering(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
 // FIXME: shouldn't that be an array inst of overwriting same thing 
     if( ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
     {
-        sh->rplr.ref_pic_list_reordering_flag_l0 = bits_read_u1(b);
+        sh->rplr.ref_pic_list_reordering_flag_l0 = bs_read_u1(b);
         if( sh->rplr.ref_pic_list_reordering_flag_l0 )
         {
             do
             {
-                sh->rplr.reordering_of_pic_nums_idc = bits_read_ue(b);
+                sh->rplr.reordering_of_pic_nums_idc = bs_read_ue(b);
                 if( sh->rplr.reordering_of_pic_nums_idc == 0 ||
                     sh->rplr.reordering_of_pic_nums_idc == 1 )
                 {
-                    sh->rplr.abs_diff_pic_num_minus1 = bits_read_ue(b);
+                    sh->rplr.abs_diff_pic_num_minus1 = bs_read_ue(b);
                 }
                 else if( sh->rplr.reordering_of_pic_nums_idc == 2 )
                 {
-                    sh->rplr.long_term_pic_num = bits_read_ue(b);
+                    sh->rplr.long_term_pic_num = bs_read_ue(b);
                 }
-            } while( sh->rplr.reordering_of_pic_nums_idc != 3 && ! bits_eof(b) );
+            } while( sh->rplr.reordering_of_pic_nums_idc != 3 && ! bs_eof(b) );
         }
     }
     if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
-        sh->rplr.ref_pic_list_reordering_flag_l1 = bits_read_u1(b);
+        sh->rplr.ref_pic_list_reordering_flag_l1 = bs_read_u1(b);
         if( sh->rplr.ref_pic_list_reordering_flag_l1 )
         {
             do
             {
-                sh->rplr.reordering_of_pic_nums_idc = bits_read_ue(b);
+                sh->rplr.reordering_of_pic_nums_idc = bs_read_ue(b);
                 if( sh->rplr.reordering_of_pic_nums_idc == 0 ||
                     sh->rplr.reordering_of_pic_nums_idc == 1 )
                 {
-                    sh->rplr.abs_diff_pic_num_minus1 = bits_read_ue(b);
+                    sh->rplr.abs_diff_pic_num_minus1 = bs_read_ue(b);
                 }
                 else if( sh->rplr.reordering_of_pic_nums_idc == 2 )
                 {
-                    sh->rplr.long_term_pic_num = bits_read_ue(b);
+                    sh->rplr.long_term_pic_num = bs_read_ue(b);
                 }
-            } while( sh->rplr.reordering_of_pic_nums_idc != 3 && ! bits_eof(b) );
+            } while( sh->rplr.reordering_of_pic_nums_idc != 3 && ! bs_eof(b) );
         }
     }
 }
 
 //7.3.3.2 Prediction weight table syntax
-void read_pred_weight_table(h264_stream_t* h, bit_shifter_t* b)
+void read_pred_weight_table(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
     sps_t* sps = h->sps;
@@ -991,28 +991,28 @@ void read_pred_weight_table(h264_stream_t* h, bit_shifter_t* b)
 
     int i, j;
 
-    sh->pwt.luma_log2_weight_denom = bits_read_ue(b);
+    sh->pwt.luma_log2_weight_denom = bs_read_ue(b);
     if( sps->chroma_format_idc != 0 )
     {
-        sh->pwt.chroma_log2_weight_denom = bits_read_ue(b);
+        sh->pwt.chroma_log2_weight_denom = bs_read_ue(b);
     }
     for( i = 0; i <= pps->num_ref_idx_l0_active_minus1; i++ )
     {
-        sh->pwt.luma_weight_l0_flag[i] = bits_read_u1(b);
+        sh->pwt.luma_weight_l0_flag[i] = bs_read_u1(b);
         if( sh->pwt.luma_weight_l0_flag[i] )
         {
-            sh->pwt.luma_weight_l0[ i ] = bits_read_se(b);
-            sh->pwt.luma_offset_l0[ i ] = bits_read_se(b);
+            sh->pwt.luma_weight_l0[ i ] = bs_read_se(b);
+            sh->pwt.luma_offset_l0[ i ] = bs_read_se(b);
         }
         if ( sps->chroma_format_idc != 0 )
         {
-            sh->pwt.chroma_weight_l0_flag[i] = bits_read_u1(b);
+            sh->pwt.chroma_weight_l0_flag[i] = bs_read_u1(b);
             if( sh->pwt.chroma_weight_l0_flag[i] )
             {
                 for( j =0; j < 2; j++ )
                 {
-                    sh->pwt.chroma_weight_l0[ i ][ j ] = bits_read_se(b);
-                    sh->pwt.chroma_offset_l0[ i ][ j ] = bits_read_se(b);
+                    sh->pwt.chroma_weight_l0[ i ][ j ] = bs_read_se(b);
+                    sh->pwt.chroma_offset_l0[ i ][ j ] = bs_read_se(b);
                 }
             }
         }
@@ -1021,21 +1021,21 @@ void read_pred_weight_table(h264_stream_t* h, bit_shifter_t* b)
     {
         for( i = 0; i <= pps->num_ref_idx_l1_active_minus1; i++ )
         {
-            sh->pwt.luma_weight_l1_flag[i] = bits_read_u1(b);
+            sh->pwt.luma_weight_l1_flag[i] = bs_read_u1(b);
             if( sh->pwt.luma_weight_l1_flag[i] )
             {
-                sh->pwt.luma_weight_l1[ i ] = bits_read_se(b);
-                sh->pwt.luma_offset_l1[ i ] = bits_read_se(b);
+                sh->pwt.luma_weight_l1[ i ] = bs_read_se(b);
+                sh->pwt.luma_offset_l1[ i ] = bs_read_se(b);
             }
             if( sps->chroma_format_idc != 0 )
             {
-                sh->pwt.chroma_weight_l1_flag[i] = bits_read_u1(b);
+                sh->pwt.chroma_weight_l1_flag[i] = bs_read_u1(b);
                 if( sh->pwt.chroma_weight_l1_flag[i] )
                 {
                     for( j = 0; j < 2; j++ )
                     {
-                        sh->pwt.chroma_weight_l1[ i ][ j ] = bits_read_se(b);
-                        sh->pwt.chroma_offset_l1[ i ][ j ] = bits_read_se(b);
+                        sh->pwt.chroma_weight_l1[ i ][ j ] = bs_read_se(b);
+                        sh->pwt.chroma_offset_l1[ i ][ j ] = bs_read_se(b);
                     }
                 }
             }
@@ -1044,42 +1044,42 @@ void read_pred_weight_table(h264_stream_t* h, bit_shifter_t* b)
 }
 
 //7.3.3.3 Decoded reference picture marking syntax
-void read_dec_ref_pic_marking(h264_stream_t* h, bit_shifter_t* b)
+void read_dec_ref_pic_marking(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
 // FIXME: shouldn't that be an array inst of overwriting same thing 
     if( h->nal->nal_unit_type == 5 )
     {
-        sh->drpm.no_output_of_prior_pics_flag = bits_read_u1(b);
-        sh->drpm.long_term_reference_flag = bits_read_u1(b);
+        sh->drpm.no_output_of_prior_pics_flag = bs_read_u1(b);
+        sh->drpm.long_term_reference_flag = bs_read_u1(b);
     }
     else
     {
-        sh->drpm.adaptive_ref_pic_marking_mode_flag = bits_read_u1(b);
+        sh->drpm.adaptive_ref_pic_marking_mode_flag = bs_read_u1(b);
         if( sh->drpm.adaptive_ref_pic_marking_mode_flag )
         {
             do
             {
-                sh->drpm.memory_management_control_operation = bits_read_ue(b);
+                sh->drpm.memory_management_control_operation = bs_read_ue(b);
                 if( sh->drpm.memory_management_control_operation == 1 ||
                     sh->drpm.memory_management_control_operation == 3 )
                 {
-                    sh->drpm.difference_of_pic_nums_minus1 = bits_read_ue(b);
+                    sh->drpm.difference_of_pic_nums_minus1 = bs_read_ue(b);
                 }
                 if(sh->drpm.memory_management_control_operation == 2 )
                 {
-                    sh->drpm.long_term_pic_num = bits_read_ue(b);
+                    sh->drpm.long_term_pic_num = bs_read_ue(b);
                 }
                 if( sh->drpm.memory_management_control_operation == 3 ||
                     sh->drpm.memory_management_control_operation == 6 )
                 {
-                    sh->drpm.long_term_frame_idx = bits_read_ue(b);
+                    sh->drpm.long_term_frame_idx = bs_read_ue(b);
                 }
                 if( sh->drpm.memory_management_control_operation == 4 )
                 {
-                    sh->drpm.max_long_term_frame_idx_plus1 = bits_read_ue(b);
+                    sh->drpm.max_long_term_frame_idx_plus1 = bs_read_ue(b);
                 }
-            } while( sh->drpm.memory_management_control_operation != 0 && ! bits_eof(b) );
+            } while( sh->drpm.memory_management_control_operation != 0 && ! bs_eof(b) );
         }
     }
 }
@@ -1091,26 +1091,26 @@ slice_data( )
 {
     if( pps->entropy_coding_mode_flag )
         while( !byte_aligned( ) )
-            cabac_alignment_one_bit = bits_read_f(1);
+            cabac_alignment_one_bit = bs_read_f(1);
     CurrMbAddr = first_mb_in_slice * ( 1 + MbaffFrameFlag );
     moreDataFlag = 1;
     prevMbSkipped = 0;
     do {
         if( ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
             if( !pps->entropy_coding_mode_flag ) {
-                mb_skip_run = bits_read_ue(b);
+                mb_skip_run = bs_read_ue(b);
                 prevMbSkipped = ( mb_skip_run > 0 );
                 for( i=0; i<mb_skip_run; i++ )
                     CurrMbAddr = NextMbAddress( CurrMbAddr );
                 moreDataFlag = more_rbsp_data( );
             } else {
-                mb_skip_flag = bits_read_ae(v);
+                mb_skip_flag = bs_read_ae(v);
                 moreDataFlag = !mb_skip_flag;
             }
         if( moreDataFlag ) {
             if( MbaffFrameFlag && ( CurrMbAddr % 2 == 0 ||
                                     ( CurrMbAddr % 2 == 1 && prevMbSkipped ) ) )
-                mb_field_decoding_flag = bits_read_u1(b) | bits_read_ae(v);
+                mb_field_decoding_flag = bs_read_u1(b) | bs_read_ae(v);
             macroblock_layer( );
         }
         if( !pps->entropy_coding_mode_flag )
@@ -1121,7 +1121,7 @@ slice_data( )
             if( MbaffFrameFlag && CurrMbAddr % 2 == 0 )
                 moreDataFlag = 1;
             else {
-                end_of_slice_flag = bits_read_ae(v);
+                end_of_slice_flag = bs_read_ae(v);
                 moreDataFlag = !end_of_slice_flag;
             }
         }
@@ -1134,8 +1134,8 @@ slice_data( )
 /***************************** writing ******************************/
 
 #define DBG_START \
-    bit_shifter_t* b2 = (bit_shifter_t*)malloc(sizeof(bit_shifter_t)); \
-    bits_init(b2, b->p, b->end - b->p); \
+    bs_t* b2 = (bs_t*)malloc(sizeof(bs_t)); \
+    bs_init(b2, b->p, b->end - b->p); \
     h264_stream_t* h2 = (h264_stream_t*)malloc(sizeof(h264_stream_t));\
     h2->sps=h->sps; h2->pps=h->pps; h2->nal=h->nal; h2->sh=h->sh;  \
 
@@ -1169,19 +1169,19 @@ int write_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int size, slice_data_rbs
 {
     nal_t* nal = h->nal;
 
-    bit_shifter_t* b = bits_new(buf, size);
+    bs_t* b = bs_new(buf, size);
 
-    bits_write_f(b,1, nal->forbidden_zero_bit);
-    bits_write_u(b,2, nal->nal_ref_idc);
-    bits_write_u(b,5, nal->nal_unit_type);
+    bs_write_f(b,1, nal->forbidden_zero_bit);
+    bs_write_u(b,2, nal->nal_ref_idc);
+    bs_write_u(b,5, nal->nal_unit_type);
 
-    bits_free(b);
+    bs_free(b);
 
     int rbsp_size = size*3/4; // NOTE this may have to be slightly smaller (3/4 smaller, worst case) in order to be guaranteed to fit
     uint8_t* rbsp_buf = (uint8_t*)calloc(1,rbsp_size);
     int nal_size = size;
 
-    b = bits_new(rbsp_buf, rbsp_size); // FIXME DEPRECATED reinit of an already inited bs
+    b = bs_new(rbsp_buf, rbsp_size); // FIXME DEPRECATED reinit of an already inited bs
 
     switch ( nal->nal_unit_type )
     {
@@ -1226,11 +1226,11 @@ int write_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int size, slice_data_rbs
     }
 
     // now get the actual size used
-    rbsp_size = bits_pos(b); // TODO check for eof/write-beyond-end
+    rbsp_size = bs_pos(b); // TODO check for eof/write-beyond-end
 
     nal_size = rbsp_to_nal(rbsp_buf, rbsp_size, buf + 1, nal_size - 1) + 1;
 
-    bits_free(b);
+    bs_free(b);
     free(rbsp_buf);
 
     return nal_size;
@@ -1238,37 +1238,37 @@ int write_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int size, slice_data_rbs
 
 
 //7.3.2.1 Sequence parameter set RBSP syntax
-void write_seq_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b)
+void write_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
 {
     sps_t* sps = h->sps;
 
     int i;
 
-    bits_write_u8(b, sps->profile_idc);
-    bits_write_u1(b, sps->constraint_set0_flag);
-    bits_write_u1(b, sps->constraint_set1_flag);
-    bits_write_u1(b, sps->constraint_set2_flag);
-    bits_write_u1(b, sps->constraint_set3_flag);
-    bits_write_u(b,4, sps->reserved_zero_4bits);  /* all 0's */
-    bits_write_u8(b, sps->level_idc);
-    bits_write_ue(b, sps->seq_parameter_set_id);
+    bs_write_u8(b, sps->profile_idc);
+    bs_write_u1(b, sps->constraint_set0_flag);
+    bs_write_u1(b, sps->constraint_set1_flag);
+    bs_write_u1(b, sps->constraint_set2_flag);
+    bs_write_u1(b, sps->constraint_set3_flag);
+    bs_write_u(b,4, sps->reserved_zero_4bits);  /* all 0's */
+    bs_write_u8(b, sps->level_idc);
+    bs_write_ue(b, sps->seq_parameter_set_id);
     if( sps->profile_idc == 100 || sps->profile_idc == 110 ||
         sps->profile_idc == 122 || sps->profile_idc == 144 )
     {
-        bits_write_ue(b, sps->chroma_format_idc);
+        bs_write_ue(b, sps->chroma_format_idc);
         if( sps->chroma_format_idc == 3 )
         {
-            bits_write_u1(b, sps->residual_colour_transform_flag);
+            bs_write_u1(b, sps->residual_colour_transform_flag);
         }
-        bits_write_ue(b, sps->bit_depth_luma_minus8);
-        bits_write_ue(b, sps->bit_depth_chroma_minus8);
-        bits_write_u1(b, sps->qpprime_y_zero_transform_bypass_flag);
-        bits_write_u1(b, sps->seq_scaling_matrix_present_flag);
+        bs_write_ue(b, sps->bit_depth_luma_minus8);
+        bs_write_ue(b, sps->bit_depth_chroma_minus8);
+        bs_write_u1(b, sps->qpprime_y_zero_transform_bypass_flag);
+        bs_write_u1(b, sps->seq_scaling_matrix_present_flag);
         if( sps->seq_scaling_matrix_present_flag )
         {
             for( i = 0; i < 8; i++ )
             {
-                bits_write_u1(b, sps->seq_scaling_list_present_flag[ i ]);
+                bs_write_u1(b, sps->seq_scaling_list_present_flag[ i ]);
                 if( sps->seq_scaling_list_present_flag[ i ] )
                 {
                     if( i < 6 )
@@ -1285,42 +1285,42 @@ void write_seq_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b)
             }
         }
     }
-    bits_write_ue(b, sps->log2_max_frame_num_minus4);
-    bits_write_ue(b, sps->pic_order_cnt_type);
+    bs_write_ue(b, sps->log2_max_frame_num_minus4);
+    bs_write_ue(b, sps->pic_order_cnt_type);
     if( sps->pic_order_cnt_type == 0 )
     {
-        bits_write_ue(b, sps->log2_max_pic_order_cnt_lsb_minus4);
+        bs_write_ue(b, sps->log2_max_pic_order_cnt_lsb_minus4);
     }
     else if( sps->pic_order_cnt_type == 1 )
     {
-        bits_write_u1(b, sps->delta_pic_order_always_zero_flag);
-        bits_write_se(b, sps->offset_for_non_ref_pic);
-        bits_write_se(b, sps->offset_for_top_to_bottom_field);
-        bits_write_ue(b, sps->num_ref_frames_in_pic_order_cnt_cycle);
+        bs_write_u1(b, sps->delta_pic_order_always_zero_flag);
+        bs_write_se(b, sps->offset_for_non_ref_pic);
+        bs_write_se(b, sps->offset_for_top_to_bottom_field);
+        bs_write_ue(b, sps->num_ref_frames_in_pic_order_cnt_cycle);
         for( i = 0; i < sps->num_ref_frames_in_pic_order_cnt_cycle; i++ )
         {
-            bits_write_se(b, sps->offset_for_ref_frame[ i ]);
+            bs_write_se(b, sps->offset_for_ref_frame[ i ]);
         }
     }
-    bits_write_ue(b, sps->num_ref_frames);
-    bits_write_u1(b, sps->gaps_in_frame_num_value_allowed_flag);
-    bits_write_ue(b, sps->pic_width_in_mbs_minus1);
-    bits_write_ue(b, sps->pic_height_in_map_units_minus1);
-    bits_write_u1(b, sps->frame_mbs_only_flag);
+    bs_write_ue(b, sps->num_ref_frames);
+    bs_write_u1(b, sps->gaps_in_frame_num_value_allowed_flag);
+    bs_write_ue(b, sps->pic_width_in_mbs_minus1);
+    bs_write_ue(b, sps->pic_height_in_map_units_minus1);
+    bs_write_u1(b, sps->frame_mbs_only_flag);
     if( !sps->frame_mbs_only_flag )
     {
-        bits_write_u1(b, sps->mb_adaptive_frame_field_flag);
+        bs_write_u1(b, sps->mb_adaptive_frame_field_flag);
     }
-    bits_write_u1(b, sps->direct_8x8_inference_flag);
-    bits_write_u1(b, sps->frame_cropping_flag);
+    bs_write_u1(b, sps->direct_8x8_inference_flag);
+    bs_write_u1(b, sps->frame_cropping_flag);
     if( sps->frame_cropping_flag )
     {
-        bits_write_ue(b, sps->frame_crop_left_offset);
-        bits_write_ue(b, sps->frame_crop_right_offset);
-        bits_write_ue(b, sps->frame_crop_top_offset);
-        bits_write_ue(b, sps->frame_crop_bottom_offset);
+        bs_write_ue(b, sps->frame_crop_left_offset);
+        bs_write_ue(b, sps->frame_crop_right_offset);
+        bs_write_ue(b, sps->frame_crop_top_offset);
+        bs_write_ue(b, sps->frame_crop_bottom_offset);
     }
-    bits_write_u1(b, sps->vui_parameters_present_flag);
+    bs_write_u1(b, sps->vui_parameters_present_flag);
     if( sps->vui_parameters_present_flag )
     {
         write_vui_parameters(h, b);
@@ -1329,7 +1329,7 @@ void write_seq_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b)
 }
 
 //7.3.2.1.1 Scaling list syntax
-void write_scaling_list(bit_shifter_t* b, int* scalingList, int sizeOfScalingList, int useDefaultScalingMatrixFlag )
+void write_scaling_list(bs_t* b, int* scalingList, int sizeOfScalingList, int useDefaultScalingMatrixFlag )
 {
     int j;
 
@@ -1351,7 +1351,7 @@ void write_scaling_list(bit_shifter_t* b, int* scalingList, int sizeOfScalingLis
             }
 
             delta_scale = (nextScale - lastScale) % 256 ;
-            bits_write_se(b, delta_scale);
+            bs_write_se(b, delta_scale);
         }
 
         lastScale = scalingList[ j ];
@@ -1360,186 +1360,186 @@ void write_scaling_list(bit_shifter_t* b, int* scalingList, int sizeOfScalingLis
 
 //Appendix E.1.1 VUI parameters syntax
 void
-write_vui_parameters(h264_stream_t* h, bit_shifter_t* b)
+write_vui_parameters(h264_stream_t* h, bs_t* b)
 {
     sps_t* sps = h->sps;
 
-    bits_write_u1(b, sps->vui.aspect_ratio_info_present_flag);
+    bs_write_u1(b, sps->vui.aspect_ratio_info_present_flag);
     if( sps->vui.aspect_ratio_info_present_flag )
     {
-        bits_write_u8(b, sps->vui.aspect_ratio_idc);
+        bs_write_u8(b, sps->vui.aspect_ratio_idc);
         if( sps->vui.aspect_ratio_idc == SAR_Extended )
         {
-            bits_write_u(b,16, sps->vui.sar_width);
-            bits_write_u(b,16, sps->vui.sar_height);
+            bs_write_u(b,16, sps->vui.sar_width);
+            bs_write_u(b,16, sps->vui.sar_height);
         }
     }
-    bits_write_u1(b, sps->vui.overscan_info_present_flag);
+    bs_write_u1(b, sps->vui.overscan_info_present_flag);
     if( sps->vui.overscan_info_present_flag )
     {
-        bits_write_u1(b, sps->vui.overscan_appropriate_flag);
+        bs_write_u1(b, sps->vui.overscan_appropriate_flag);
     }
-    bits_write_u1(b, sps->vui.video_signal_type_present_flag);
+    bs_write_u1(b, sps->vui.video_signal_type_present_flag);
     if( sps->vui.video_signal_type_present_flag )
     {
-        bits_write_u(b,3, sps->vui.video_format);
-        bits_write_u1(b, sps->vui.video_full_range_flag);
-        bits_write_u1(b, sps->vui.colour_description_present_flag);
+        bs_write_u(b,3, sps->vui.video_format);
+        bs_write_u1(b, sps->vui.video_full_range_flag);
+        bs_write_u1(b, sps->vui.colour_description_present_flag);
         if( sps->vui.colour_description_present_flag )
         {
-            bits_write_u8(b, sps->vui.colour_primaries);
-            bits_write_u8(b, sps->vui.transfer_characteristics);
-            bits_write_u8(b, sps->vui.matrix_coefficients);
+            bs_write_u8(b, sps->vui.colour_primaries);
+            bs_write_u8(b, sps->vui.transfer_characteristics);
+            bs_write_u8(b, sps->vui.matrix_coefficients);
         }
     }
-    bits_write_u1(b, sps->vui.chroma_loc_info_present_flag);
+    bs_write_u1(b, sps->vui.chroma_loc_info_present_flag);
     if( sps->vui.chroma_loc_info_present_flag )
     {
-        bits_write_ue(b, sps->vui.chroma_sample_loc_type_top_field);
-        bits_write_ue(b, sps->vui.chroma_sample_loc_type_bottom_field);
+        bs_write_ue(b, sps->vui.chroma_sample_loc_type_top_field);
+        bs_write_ue(b, sps->vui.chroma_sample_loc_type_bottom_field);
     }
-    bits_write_u1(b, sps->vui.timing_info_present_flag);
+    bs_write_u1(b, sps->vui.timing_info_present_flag);
     if( sps->vui.timing_info_present_flag )
     {
-        bits_write_u(b,32, sps->vui.num_units_in_tick);
-        bits_write_u(b,32, sps->vui.time_scale);
-        bits_write_u1(b, sps->vui.fixed_frame_rate_flag);
+        bs_write_u(b,32, sps->vui.num_units_in_tick);
+        bs_write_u(b,32, sps->vui.time_scale);
+        bs_write_u1(b, sps->vui.fixed_frame_rate_flag);
     }
-    bits_write_u1(b, sps->vui.nal_hrd_parameters_present_flag);
+    bs_write_u1(b, sps->vui.nal_hrd_parameters_present_flag);
     if( sps->vui.nal_hrd_parameters_present_flag )
     {
         write_hrd_parameters(h, b);
     }
-    bits_write_u1(b, sps->vui.vcl_hrd_parameters_present_flag);
+    bs_write_u1(b, sps->vui.vcl_hrd_parameters_present_flag);
     if( sps->vui.vcl_hrd_parameters_present_flag )
     {
         write_hrd_parameters(h, b);
     }
     if( sps->vui.nal_hrd_parameters_present_flag || sps->vui.vcl_hrd_parameters_present_flag )
     {
-        bits_write_u1(b, sps->vui.low_delay_hrd_flag);
+        bs_write_u1(b, sps->vui.low_delay_hrd_flag);
     }
-    bits_write_u1(b, sps->vui.pic_struct_present_flag);
-    bits_write_u1(b, sps->vui.bitstream_restriction_flag);
+    bs_write_u1(b, sps->vui.pic_struct_present_flag);
+    bs_write_u1(b, sps->vui.bitstream_restriction_flag);
     if( sps->vui.bitstream_restriction_flag )
     {
-        bits_write_u1(b, sps->vui.motion_vectors_over_pic_boundaries_flag);
-        bits_write_ue(b, sps->vui.max_bytes_per_pic_denom);
-        bits_write_ue(b, sps->vui.max_bits_per_mb_denom);
-        bits_write_ue(b, sps->vui.log2_max_mv_length_horizontal);
-        bits_write_ue(b, sps->vui.log2_max_mv_length_vertical);
-        bits_write_ue(b, sps->vui.num_reorder_frames);
-        bits_write_ue(b, sps->vui.max_dec_frame_buffering);
+        bs_write_u1(b, sps->vui.motion_vectors_over_pic_boundaries_flag);
+        bs_write_ue(b, sps->vui.max_bytes_per_pic_denom);
+        bs_write_ue(b, sps->vui.max_bs_per_mb_denom);
+        bs_write_ue(b, sps->vui.log2_max_mv_length_horizontal);
+        bs_write_ue(b, sps->vui.log2_max_mv_length_vertical);
+        bs_write_ue(b, sps->vui.num_reorder_frames);
+        bs_write_ue(b, sps->vui.max_dec_frame_buffering);
     }
 }
 
 //Appendix E.1.2 HRD parameters syntax
 void
-write_hrd_parameters(h264_stream_t* h, bit_shifter_t* b)
+write_hrd_parameters(h264_stream_t* h, bs_t* b)
 {
     sps_t* sps = h->sps;
     int SchedSelIdx;
 
-    bits_write_ue(b, sps->hrd.cpb_cnt_minus1);
-    bits_write_u(b,4, sps->hrd.bit_rate_scale);
-    bits_write_u(b,4, sps->hrd.cpb_size_scale);
+    bs_write_ue(b, sps->hrd.cpb_cnt_minus1);
+    bs_write_u(b,4, sps->hrd.bit_rate_scale);
+    bs_write_u(b,4, sps->hrd.cpb_size_scale);
     for( SchedSelIdx = 0; SchedSelIdx <= sps->hrd.cpb_cnt_minus1; SchedSelIdx++ )
     {
-        bits_write_ue(b, sps->hrd.bit_rate_value_minus1[ SchedSelIdx ]);
-        bits_write_ue(b, sps->hrd.cpb_size_value_minus1[ SchedSelIdx ]);
-        bits_write_u1(b, sps->hrd.cbr_flag[ SchedSelIdx ]);
+        bs_write_ue(b, sps->hrd.bit_rate_value_minus1[ SchedSelIdx ]);
+        bs_write_ue(b, sps->hrd.cpb_size_value_minus1[ SchedSelIdx ]);
+        bs_write_u1(b, sps->hrd.cbr_flag[ SchedSelIdx ]);
     }
-    bits_write_u(b,5, sps->hrd.initial_cpb_removal_delay_length_minus1);
-    bits_write_u(b,5, sps->hrd.cpb_removal_delay_length_minus1);
-    bits_write_u(b,5, sps->hrd.dpb_output_delay_length_minus1);
-    bits_write_u(b,5, sps->hrd.time_offset_length);
+    bs_write_u(b,5, sps->hrd.initial_cpb_removal_delay_length_minus1);
+    bs_write_u(b,5, sps->hrd.cpb_removal_delay_length_minus1);
+    bs_write_u(b,5, sps->hrd.dpb_output_delay_length_minus1);
+    bs_write_u(b,5, sps->hrd.time_offset_length);
 }
 
 /*
 UNIMPLEMENTED
 //7.3.2.1.2 Sequence parameter set extension RBSP syntax
-int write_seq_parameter_set_extension_rbsp(bit_shifter_t* b, sps_ext_t* sps_ext) {
-    bits_write_ue(b, seq_parameter_set_id);
-    bits_write_ue(b, aux_format_idc);
+int write_seq_parameter_set_extension_rbsp(bs_t* b, sps_ext_t* sps_ext) {
+    bs_write_ue(b, seq_parameter_set_id);
+    bs_write_ue(b, aux_format_idc);
     if( aux_format_idc != 0 ) {
-        bits_write_ue(b, bit_depth_aux_minus8);
-        bits_write_u1(b, alpha_incr_flag);
-        bits_write_u(v, alpha_opaque_value);
-        bits_write_u(v, alpha_transparent_value);
+        bs_write_ue(b, bit_depth_aux_minus8);
+        bs_write_u1(b, alpha_incr_flag);
+        bs_write_u(v, alpha_opaque_value);
+        bs_write_u(v, alpha_transparent_value);
     }
-    bits_write_u1(b, additional_extension_flag);
+    bs_write_u1(b, additional_extension_flag);
     write_rbsp_trailing_bits();
 }
 */
 
 //7.3.2.2 Picture parameter set RBSP syntax
-void write_pic_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b)
+void write_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
 {
     pps_t* pps = h->pps;
 
     int i;
     int i_group;
 
-    bits_write_ue(b, pps->pic_parameter_set_id);
-    bits_write_ue(b, pps->seq_parameter_set_id);
-    bits_write_u1(b, pps->entropy_coding_mode_flag);
-    bits_write_u1(b, pps->pic_order_present_flag);
-    bits_write_ue(b, pps->num_slice_groups_minus1);
+    bs_write_ue(b, pps->pic_parameter_set_id);
+    bs_write_ue(b, pps->seq_parameter_set_id);
+    bs_write_u1(b, pps->entropy_coding_mode_flag);
+    bs_write_u1(b, pps->pic_order_present_flag);
+    bs_write_ue(b, pps->num_slice_groups_minus1);
 
     if( pps->num_slice_groups_minus1 > 0 )
     {
-        bits_write_ue(b, pps->slice_group_map_type);
+        bs_write_ue(b, pps->slice_group_map_type);
         if( pps->slice_group_map_type == 0 )
         {
             for( i_group = 0; i_group <= pps->num_slice_groups_minus1; i_group++ )
             {
-                bits_write_ue(b, pps->run_length_minus1[ i_group ]);
+                bs_write_ue(b, pps->run_length_minus1[ i_group ]);
             }
         }
         else if( pps->slice_group_map_type == 2 )
         {
             for( i_group = 0; i_group < pps->num_slice_groups_minus1; i_group++ )
             {
-                bits_write_ue(b, pps->top_left[ i_group ]);
-                bits_write_ue(b, pps->bottom_right[ i_group ]);
+                bs_write_ue(b, pps->top_left[ i_group ]);
+                bs_write_ue(b, pps->bottom_right[ i_group ]);
             }
         }
         else if( pps->slice_group_map_type == 3 ||
                  pps->slice_group_map_type == 4 ||
                  pps->slice_group_map_type == 5 )
         {
-            bits_write_u1(b, pps->slice_group_change_direction_flag);
-            bits_write_ue(b, pps->slice_group_change_rate_minus1);
+            bs_write_u1(b, pps->slice_group_change_direction_flag);
+            bs_write_ue(b, pps->slice_group_change_rate_minus1);
         }
         else if( pps->slice_group_map_type == 6 )
         {
-            bits_write_ue(b, pps->pic_size_in_map_units_minus1);
+            bs_write_ue(b, pps->pic_size_in_map_units_minus1);
             for( i = 0; i <= pps->pic_size_in_map_units_minus1; i++ )
             {
-                bits_write_u(b, ceil( log2( pps->num_slice_groups_minus1 + 1 ) ), pps->slice_group_id[ i ] ); // was u(v)
+                bs_write_u(b, ceil( log2( pps->num_slice_groups_minus1 + 1 ) ), pps->slice_group_id[ i ] ); // was u(v)
             }
         }
     }
-    bits_write_ue(b, pps->num_ref_idx_l0_active_minus1);
-    bits_write_ue(b, pps->num_ref_idx_l1_active_minus1);
-    bits_write_u1(b, pps->weighted_pred_flag);
-    bits_write_u(b,2, pps->weighted_bipred_idc);
-    bits_write_se(b, pps->pic_init_qp_minus26);
-    bits_write_se(b, pps->pic_init_qs_minus26);
-    bits_write_se(b, pps->chroma_qp_index_offset);
-    bits_write_u1(b, pps->deblocking_filter_control_present_flag);
-    bits_write_u1(b, pps->constrained_intra_pred_flag);
-    bits_write_u1(b, pps->redundant_pic_cnt_present_flag);
+    bs_write_ue(b, pps->num_ref_idx_l0_active_minus1);
+    bs_write_ue(b, pps->num_ref_idx_l1_active_minus1);
+    bs_write_u1(b, pps->weighted_pred_flag);
+    bs_write_u(b,2, pps->weighted_bipred_idc);
+    bs_write_se(b, pps->pic_init_qp_minus26);
+    bs_write_se(b, pps->pic_init_qs_minus26);
+    bs_write_se(b, pps->chroma_qp_index_offset);
+    bs_write_u1(b, pps->deblocking_filter_control_present_flag);
+    bs_write_u1(b, pps->constrained_intra_pred_flag);
+    bs_write_u1(b, pps->redundant_pic_cnt_present_flag);
     
     if ( pps->_more_rbsp_data_present )
     {
-        bits_write_u1(b, pps->transform_8x8_mode_flag);
-        bits_write_u1(b, pps->pic_scaling_matrix_present_flag);
+        bs_write_u1(b, pps->transform_8x8_mode_flag);
+        bs_write_u1(b, pps->pic_scaling_matrix_present_flag);
         if( pps->pic_scaling_matrix_present_flag )
         {
             for( i = 0; i < 6 + 2* pps->transform_8x8_mode_flag; i++ )
             {
-                bits_write_u1(b, pps->pic_scaling_list_present_flag[ i ]);
+                bs_write_u1(b, pps->pic_scaling_list_present_flag[ i ]);
                 if( pps->pic_scaling_list_present_flag[ i ] )
                 {
                     if( i < 6 )
@@ -1555,14 +1555,14 @@ void write_pic_parameter_set_rbsp(h264_stream_t* h, bit_shifter_t* b)
                 }
             }
         }
-        bits_write_se(b, pps->second_chroma_qp_index_offset);
+        bs_write_se(b, pps->second_chroma_qp_index_offset);
     }
     
     write_rbsp_trailing_bits(h, b);
 }
 
 //7.3.2.3 Supplemental enhancement information RBSP syntax
-void write_sei_rbsp(h264_stream_t* h, bit_shifter_t* b)
+void write_sei_rbsp(h264_stream_t* h, bs_t* b)
 {
     int i;
     for (i = 0; i < h->num_seis; i++)
@@ -1576,25 +1576,25 @@ void write_sei_rbsp(h264_stream_t* h, bit_shifter_t* b)
     write_rbsp_trailing_bits(h, b);
 }
 
-void _write_ff_coded_number(bit_shifter_t* b, int n)
+void _write_ff_coded_number(bs_t* b, int n)
 {
     while (1)
     {
         if (n > 0xff)
         {
-            bits_write_u8(b, 0xff);
+            bs_write_u8(b, 0xff);
             n -= 0xff;
         }
         else
         {
-            bits_write_u8(b, n);
+            bs_write_u8(b, n);
             break;
         }
     }
 }
 
 //7.3.2.3.1 Supplemental enhancement information message syntax
-void write_sei_message(h264_stream_t* h, bit_shifter_t* b)
+void write_sei_message(h264_stream_t* h, bs_t* b)
 {
     // FIXME need some way to calculate size, or write message then write size
     _write_ff_coded_number(b, h->sei->payloadType);
@@ -1603,35 +1603,35 @@ void write_sei_message(h264_stream_t* h, bit_shifter_t* b)
 }
 
 //7.3.2.4 Access unit delimiter RBSP syntax
-void write_access_unit_delimiter_rbsp(h264_stream_t* h, bit_shifter_t* b)
+void write_access_unit_delimiter_rbsp(h264_stream_t* h, bs_t* b)
 {
-    bits_write_u(b,3, h->aud->primary_pic_type);
+    bs_write_u(b,3, h->aud->primary_pic_type);
     write_rbsp_trailing_bits(h, b);
 }
 
 //7.3.2.5 End of sequence RBSP syntax
-void write_end_of_seq_rbsp(h264_stream_t* h, bit_shifter_t* b)
+void write_end_of_seq_rbsp(h264_stream_t* h, bs_t* b)
 {
 }
 
 //7.3.2.6 End of stream RBSP syntax
-void write_end_of_stream_rbsp(h264_stream_t* h, bit_shifter_t* b)
+void write_end_of_stream_rbsp(h264_stream_t* h, bs_t* b)
 {
 }
 
 //7.3.2.7 Filler data RBSP syntax
-void write_filler_data_rbsp(h264_stream_t* h, bit_shifter_t* b)
+void write_filler_data_rbsp(h264_stream_t* h, bs_t* b)
 {
     int ff_byte = 0xFF; //FIXME
     while( next_bits(b, 8) == 0xFF )
     {
-        bits_write_f(b,8, ff_byte);  // equal to 0xFF
+        bs_write_f(b,8, ff_byte);  // equal to 0xFF
     }
     write_rbsp_trailing_bits(h, b);
 }
 
 //7.3.2.8 Slice layer without partitioning RBSP syntax
-void write_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data, bit_shifter_t* b)
+void write_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data, bs_t* b)
 {
     write_slice_header(h, b);
     if ( slice_data != NULL )
@@ -1640,10 +1640,10 @@ void write_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data, bit
         if ( h->pps->entropy_coding_mode_flag )
         {
            // CABAC alignment bits
-            while ( ! bits_byte_aligned(b) ) bits_write_u1(b, 0x01); 
+            while ( ! bs_byte_aligned(b) ) bs_write_u1(b, 0x01); 
         }
 
-        bits_write_bytes( b, slice_data->rbsp_buf, slice_data->rbsp_size ); 
+        bs_write_bytes( b, slice_data->rbsp_buf, slice_data->rbsp_size ); 
         return; // hack -- slice trailing bits already included...
     }
     //slice_data( ); /* all categories of slice_data( ) syntax */
@@ -1656,7 +1656,7 @@ void write_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data, bit
 slice_data_partition_a_layer_rbsp( )
 {
     write_slice_header( );             // only category 2
-    bits_write_ue(b, slice_id)
+    bs_write_ue(b, slice_id)
     write_slice_data( );               // only category 2
     write_rbsp_slice_trailing_bits( ); // only category 2
 }
@@ -1664,9 +1664,9 @@ slice_data_partition_a_layer_rbsp( )
 //7.3.2.9.2 Slice data partition B RBSP syntax
 slice_data_partition_b_layer_rbsp( )
 {
-    bits_write_ue(b, slice_id);    // only category 3
+    bs_write_ue(b, slice_id);    // only category 3
     if( redundant_pic_cnt_present_flag )
-        bits_write_ue(b, redundant_pic_cnt);
+        bs_write_ue(b, redundant_pic_cnt);
     write_slice_data( );               // only category 3
     write_rbsp_slice_trailing_bits( ); // only category 3
 }
@@ -1674,16 +1674,16 @@ slice_data_partition_b_layer_rbsp( )
 //7.3.2.9.3 Slice data partition C RBSP syntax
 slice_data_partition_c_layer_rbsp( )
 {
-    bits_write_ue(b, slice_id);    // only category 4
+    bs_write_ue(b, slice_id);    // only category 4
     if( redundant_pic_cnt_present_flag )
-        bits_write_ue(b, redundant_pic_cnt);
+        bs_write_ue(b, redundant_pic_cnt);
     write_slice_data( );               // only category 4
     rbsp_slice_trailing_bits( ); // only category 4
 }
 */
 
 //7.3.2.10 RBSP slice trailing bits syntax
-void write_rbsp_slice_trailing_bits(h264_stream_t* h, bit_shifter_t* b)
+void write_rbsp_slice_trailing_bits(h264_stream_t* h, bs_t* b)
 {
     write_rbsp_trailing_bits(h, b);
 
@@ -1694,27 +1694,27 @@ void write_rbsp_slice_trailing_bits(h264_stream_t* h, bit_shifter_t* b)
         // NOTE do not write any cabac_zero_word for now - this appears to be optional
         while( more_rbsp_trailing_data(h, b) )
         {
-            bits_write_f(b,16, 0x0000); // cabac_zero_word
+            bs_write_f(b,16, 0x0000); // cabac_zero_word
         }
         */
     }
 }
 
 //7.3.2.11 RBSP trailing bits syntax
-void write_rbsp_trailing_bits(h264_stream_t* h, bit_shifter_t* b)
+void write_rbsp_trailing_bits(h264_stream_t* h, bs_t* b)
 {
     int rbsp_stop_one_bit = 1;
     int rbsp_alignment_zero_bit = 0;
 
-    bits_write_f(b,1, rbsp_stop_one_bit); // equal to 1
-    while( !bits_byte_aligned(b) )
+    bs_write_f(b,1, rbsp_stop_one_bit); // equal to 1
+    while( !bs_byte_aligned(b) )
     {
-        bits_write_f(b,1, rbsp_alignment_zero_bit); // equal to 0
+        bs_write_f(b,1, rbsp_alignment_zero_bit); // equal to 0
     }
 }
 
 //7.3.3 Slice header syntax
-void write_slice_header(h264_stream_t* h, bit_shifter_t* b)
+void write_slice_header(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;    
     pps_t* pps = h->pps_table[sh->pic_parameter_set_id];
@@ -1724,55 +1724,55 @@ void write_slice_header(h264_stream_t* h, bit_shifter_t* b)
     //DBG_START
     //h2->sh = (slice_header_t*)malloc(sizeof(slice_header_t));
 
-    bits_write_ue(b, sh->first_mb_in_slice);
-    bits_write_ue(b, sh->slice_type);
-    bits_write_ue(b, sh->pic_parameter_set_id);
-    bits_write_u(b, sps->log2_max_frame_num_minus4 + 4, sh->frame_num ); // was u(v)
+    bs_write_ue(b, sh->first_mb_in_slice);
+    bs_write_ue(b, sh->slice_type);
+    bs_write_ue(b, sh->pic_parameter_set_id);
+    bs_write_u(b, sps->log2_max_frame_num_minus4 + 4, sh->frame_num ); // was u(v)
     if( !sps->frame_mbs_only_flag )
     {
-        bits_write_u1(b, sh->field_pic_flag);
+        bs_write_u1(b, sh->field_pic_flag);
         if( sh->field_pic_flag )
         {
-            bits_write_u1(b, sh->bottom_field_flag);
+            bs_write_u1(b, sh->bottom_field_flag);
         }
     }
     if( nal->nal_unit_type == 5 )
     {
-        bits_write_ue(b, sh->idr_pic_id);
+        bs_write_ue(b, sh->idr_pic_id);
     }
     if( sps->pic_order_cnt_type == 0 )
     {
-        bits_write_u(b, sps->log2_max_pic_order_cnt_lsb_minus4 + 4, sh->pic_order_cnt_lsb ); // was u(v)
+        bs_write_u(b, sps->log2_max_pic_order_cnt_lsb_minus4 + 4, sh->pic_order_cnt_lsb ); // was u(v)
         if( pps->pic_order_present_flag && !sh->field_pic_flag )
         {
-            bits_write_se(b, sh->delta_pic_order_cnt_bottom);
+            bs_write_se(b, sh->delta_pic_order_cnt_bottom);
         }
     }
     if( sps->pic_order_cnt_type == 1 && !sps->delta_pic_order_always_zero_flag )
     {
-        bits_write_se(b, sh->delta_pic_order_cnt[ 0 ]);
+        bs_write_se(b, sh->delta_pic_order_cnt[ 0 ]);
         if( pps->pic_order_present_flag && !sh->field_pic_flag )
         {
-            bits_write_se(b, sh->delta_pic_order_cnt[ 1 ]);
+            bs_write_se(b, sh->delta_pic_order_cnt[ 1 ]);
         }
     }
     if( pps->redundant_pic_cnt_present_flag )
     {
-        bits_write_ue(b, sh->redundant_pic_cnt);
+        bs_write_ue(b, sh->redundant_pic_cnt);
     }
     if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
-        bits_write_u1(b, sh->direct_spatial_mv_pred_flag);
+        bs_write_u1(b, sh->direct_spatial_mv_pred_flag);
     }
     if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_P ) || is_slice_type( sh->slice_type, SH_SLICE_TYPE_SP ) || is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
-        bits_write_u1(b, sh->num_ref_idx_active_override_flag);
+        bs_write_u1(b, sh->num_ref_idx_active_override_flag);
         if( sh->num_ref_idx_active_override_flag )
         {
-            bits_write_ue(b, sh->num_ref_idx_l0_active_minus1); // FIXME does this modify the pps?
+            bs_write_ue(b, sh->num_ref_idx_l0_active_minus1); // FIXME does this modify the pps?
             if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
             {
-                bits_write_ue(b, sh->num_ref_idx_l1_active_minus1);
+                bs_write_ue(b, sh->num_ref_idx_l1_active_minus1);
             }
         }
     }
@@ -1788,30 +1788,30 @@ void write_slice_header(h264_stream_t* h, bit_shifter_t* b)
     }
     if( pps->entropy_coding_mode_flag && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
     {
-        bits_write_ue(b, sh->cabac_init_idc);
+        bs_write_ue(b, sh->cabac_init_idc);
     }
-    bits_write_se(b, sh->slice_qp_delta);
+    bs_write_se(b, sh->slice_qp_delta);
     if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_SP ) || is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
     {
         if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_SP ) )
         {
-            bits_write_u1(b, sh->sp_for_switch_flag);
+            bs_write_u1(b, sh->sp_for_switch_flag);
         }
-        bits_write_se(b, sh->slice_qs_delta);
+        bs_write_se(b, sh->slice_qs_delta);
     }
     if( pps->deblocking_filter_control_present_flag )
     {
-        bits_write_ue(b, sh->disable_deblocking_filter_idc);
+        bs_write_ue(b, sh->disable_deblocking_filter_idc);
         if( sh->disable_deblocking_filter_idc != 1 )
         {
-            bits_write_se(b, sh->slice_alpha_c0_offset_div2);
-            bits_write_se(b, sh->slice_beta_offset_div2);
+            bs_write_se(b, sh->slice_alpha_c0_offset_div2);
+            bs_write_se(b, sh->slice_beta_offset_div2);
         }
     }
     if( pps->num_slice_groups_minus1 > 0 &&
         pps->slice_group_map_type >= 3 && pps->slice_group_map_type <= 5)
     {
-        bits_write_u(b, ceil( log2( pps->pic_size_in_map_units_minus1 +
+        bs_write_u(b, ceil( log2( pps->pic_size_in_map_units_minus1 +
                                   pps->slice_group_change_rate_minus1 + 1 ) ),
                    sh->slice_group_change_cycle ); // was u(v) // FIXME add 2?
     }
@@ -1821,46 +1821,46 @@ void write_slice_header(h264_stream_t* h, bit_shifter_t* b)
 }
 
 //7.3.3.1 Reference picture list reordering syntax
-void write_ref_pic_list_reordering(h264_stream_t* h, bit_shifter_t* b)
+void write_ref_pic_list_reordering(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
 
     if( ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
     {
-        bits_write_u1(b, sh->rplr.ref_pic_list_reordering_flag_l0);
+        bs_write_u1(b, sh->rplr.ref_pic_list_reordering_flag_l0);
         if( sh->rplr.ref_pic_list_reordering_flag_l0 )
         {
             do
             {
-                bits_write_ue(b, sh->rplr.reordering_of_pic_nums_idc);
+                bs_write_ue(b, sh->rplr.reordering_of_pic_nums_idc);
                 if( sh->rplr.reordering_of_pic_nums_idc == 0 ||
                     sh->rplr.reordering_of_pic_nums_idc == 1 )
                 {
-                    bits_write_ue(b, sh->rplr.abs_diff_pic_num_minus1);
+                    bs_write_ue(b, sh->rplr.abs_diff_pic_num_minus1);
                 }
                 else if( sh->rplr.reordering_of_pic_nums_idc == 2 )
                 {
-                    bits_write_ue(b, sh->rplr.long_term_pic_num);
+                    bs_write_ue(b, sh->rplr.long_term_pic_num);
                 }
             } while( sh->rplr.reordering_of_pic_nums_idc != 3 );
         }
     }
     if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
-        bits_write_u1(b, sh->rplr.ref_pic_list_reordering_flag_l1);
+        bs_write_u1(b, sh->rplr.ref_pic_list_reordering_flag_l1);
         if( sh->rplr.ref_pic_list_reordering_flag_l1 )
         {
             do
             {
-                bits_write_ue(b, sh->rplr.reordering_of_pic_nums_idc);
+                bs_write_ue(b, sh->rplr.reordering_of_pic_nums_idc);
                 if( sh->rplr.reordering_of_pic_nums_idc == 0 ||
                     sh->rplr.reordering_of_pic_nums_idc == 1 )
                 {
-                    bits_write_ue(b, sh->rplr.abs_diff_pic_num_minus1);
+                    bs_write_ue(b, sh->rplr.abs_diff_pic_num_minus1);
                 }
                 else if( sh->rplr.reordering_of_pic_nums_idc == 2 )
                 {
-                    bits_write_ue(b, sh->rplr.long_term_pic_num);
+                    bs_write_ue(b, sh->rplr.long_term_pic_num);
                 }
             } while( sh->rplr.reordering_of_pic_nums_idc != 3 );
         }
@@ -1868,7 +1868,7 @@ void write_ref_pic_list_reordering(h264_stream_t* h, bit_shifter_t* b)
 }
 
 //7.3.3.2 Prediction weight table syntax
-void write_pred_weight_table(h264_stream_t* h, bit_shifter_t* b)
+void write_pred_weight_table(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
     sps_t* sps = h->sps;
@@ -1876,28 +1876,28 @@ void write_pred_weight_table(h264_stream_t* h, bit_shifter_t* b)
 
     int i, j;
 
-    bits_write_ue(b, sh->pwt.luma_log2_weight_denom);
+    bs_write_ue(b, sh->pwt.luma_log2_weight_denom);
     if( sps->chroma_format_idc != 0 )
     {
-        bits_write_ue(b, sh->pwt.chroma_log2_weight_denom);
+        bs_write_ue(b, sh->pwt.chroma_log2_weight_denom);
     }
     for( i = 0; i <= pps->num_ref_idx_l0_active_minus1; i++ )
     {
-        bits_write_u1(b, sh->pwt.luma_weight_l0_flag[i]);
+        bs_write_u1(b, sh->pwt.luma_weight_l0_flag[i]);
         if( sh->pwt.luma_weight_l0_flag[i] )
         {
-            bits_write_se(b, sh->pwt.luma_weight_l0[ i ]);
-            bits_write_se(b, sh->pwt.luma_offset_l0[ i ]);
+            bs_write_se(b, sh->pwt.luma_weight_l0[ i ]);
+            bs_write_se(b, sh->pwt.luma_offset_l0[ i ]);
         }
         if ( sps->chroma_format_idc != 0 )
         {
-            bits_write_u1(b, sh->pwt.chroma_weight_l0_flag[i]);
+            bs_write_u1(b, sh->pwt.chroma_weight_l0_flag[i]);
             if( sh->pwt.chroma_weight_l0_flag[i] )
             {
                 for( j =0; j < 2; j++ )
                 {
-                    bits_write_se(b, sh->pwt.chroma_weight_l0[ i ][ j ]);
-                    bits_write_se(b, sh->pwt.chroma_offset_l0[ i ][ j ]);
+                    bs_write_se(b, sh->pwt.chroma_weight_l0[ i ][ j ]);
+                    bs_write_se(b, sh->pwt.chroma_offset_l0[ i ][ j ]);
                 }
             }
         }
@@ -1906,21 +1906,21 @@ void write_pred_weight_table(h264_stream_t* h, bit_shifter_t* b)
     {
         for( i = 0; i <= pps->num_ref_idx_l1_active_minus1; i++ )
         {
-            bits_write_u1(b, sh->pwt.luma_weight_l1_flag[i]);
+            bs_write_u1(b, sh->pwt.luma_weight_l1_flag[i]);
             if( sh->pwt.luma_weight_l1_flag[i] )
             {
-                bits_write_se(b, sh->pwt.luma_weight_l1[ i ]);
-                bits_write_se(b, sh->pwt.luma_offset_l1[ i ]);
+                bs_write_se(b, sh->pwt.luma_weight_l1[ i ]);
+                bs_write_se(b, sh->pwt.luma_offset_l1[ i ]);
             }
             if( sps->chroma_format_idc != 0 )
             {
-                bits_write_u1(b, sh->pwt.chroma_weight_l1_flag[i]);
+                bs_write_u1(b, sh->pwt.chroma_weight_l1_flag[i]);
                 if( sh->pwt.chroma_weight_l1_flag[i] )
                 {
                     for( j = 0; j < 2; j++ )
                     {
-                        bits_write_se(b, sh->pwt.chroma_weight_l1[ i ][ j ]);
-                        bits_write_se(b, sh->pwt.chroma_offset_l1[ i ][ j ]);
+                        bs_write_se(b, sh->pwt.chroma_weight_l1[ i ][ j ]);
+                        bs_write_se(b, sh->pwt.chroma_offset_l1[ i ][ j ]);
                     }
                 }
             }
@@ -1929,40 +1929,40 @@ void write_pred_weight_table(h264_stream_t* h, bit_shifter_t* b)
 }
 
 //7.3.3.3 Decoded reference picture marking syntax
-void write_dec_ref_pic_marking(h264_stream_t* h, bit_shifter_t* b)
+void write_dec_ref_pic_marking(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
 // FIXME: shouldn't that be an array inst of overwriting same thing 
     if( h->nal->nal_unit_type == 5 )
     {
-        bits_write_u1(b, sh->drpm.no_output_of_prior_pics_flag);
-        bits_write_u1(b, sh->drpm.long_term_reference_flag);
+        bs_write_u1(b, sh->drpm.no_output_of_prior_pics_flag);
+        bs_write_u1(b, sh->drpm.long_term_reference_flag);
     }
     else
     {
-        bits_write_u1(b, sh->drpm.adaptive_ref_pic_marking_mode_flag);
+        bs_write_u1(b, sh->drpm.adaptive_ref_pic_marking_mode_flag);
         if( sh->drpm.adaptive_ref_pic_marking_mode_flag )
         {
             do
             {
-                bits_write_ue(b, sh->drpm.memory_management_control_operation);
+                bs_write_ue(b, sh->drpm.memory_management_control_operation);
                 if( sh->drpm.memory_management_control_operation == 1 ||
                     sh->drpm.memory_management_control_operation == 3 )
                 {
-                    bits_write_ue(b, sh->drpm.difference_of_pic_nums_minus1);
+                    bs_write_ue(b, sh->drpm.difference_of_pic_nums_minus1);
                 }
                 if(sh->drpm.memory_management_control_operation == 2 )
                 {
-                    bits_write_ue(b, sh->drpm.long_term_pic_num);
+                    bs_write_ue(b, sh->drpm.long_term_pic_num);
                 }
                 if( sh->drpm.memory_management_control_operation == 3 ||
                     sh->drpm.memory_management_control_operation == 6 )
                 {
-                    bits_write_ue(b, sh->drpm.long_term_frame_idx);
+                    bs_write_ue(b, sh->drpm.long_term_frame_idx);
                 }
                 if( sh->drpm.memory_management_control_operation == 4 )
                 {
-                    bits_write_ue(b, sh->drpm.max_long_term_frame_idx_plus1);
+                    bs_write_ue(b, sh->drpm.max_long_term_frame_idx_plus1);
                 }
             } while( sh->drpm.memory_management_control_operation != 0 );
         }
@@ -1976,26 +1976,26 @@ slice_data( )
 {
     if( pps->entropy_coding_mode_flag )
         while( !byte_aligned( ) )
-            bits_write_f(1, cabac_alignment_one_bit);
+            bs_write_f(1, cabac_alignment_one_bit);
     CurrMbAddr = first_mb_in_slice * ( 1 + MbaffFrameFlag );
     moreDataFlag = 1;
     prevMbSkipped = 0;
     do {
         if( ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ssh->lice_type != SH_SLICE_TYPE_SI )
             if( !pps->entropy_coding_mode_flag ) {
-                bits_write_ue(b, mb_skip_run);
+                bs_write_ue(b, mb_skip_run);
                 prevMbSkipped = ( mb_skip_run > 0 );
                 for( i=0; i<mb_skip_run; i++ )
                     CurrMbAddr = NextMbAddress( CurrMbAddr );
                 moreDataFlag = more_rbsp_data( );
             } else {
-                bits_write_ae(v, mb_skip_flag);
+                bs_write_ae(v, mb_skip_flag);
                 moreDataFlag = !mb_skip_flag;
             }
         if( moreDataFlag ) {
             if( MbaffFrameFlag && ( CurrMbAddr % 2 == 0 ||
                                     ( CurrMbAddr % 2 == 1 && prevMbSkipped ) ) )
-                bits_write_u1(b) | bits_write_ae(v, mb_field_decoding_flag);
+                bs_write_u1(b) | bs_write_ae(v, mb_field_decoding_flag);
             macroblock_layer( );
         }
         if( !pps->entropy_coding_mode_flag )
@@ -2006,7 +2006,7 @@ slice_data( )
             if( MbaffFrameFlag && CurrMbAddr % 2 == 0 )
                 moreDataFlag = 1;
             else {
-                bits_write_ae(v, end_of_slice_flag);
+                bs_write_ae(v, end_of_slice_flag);
                 moreDataFlag = !end_of_slice_flag;
             }
         }
@@ -2092,7 +2092,7 @@ void debug_sps(sps_t* sps)
     printf(" bitstream_restriction_flag : %d \n", sps->vui.bitstream_restriction_flag );
       printf("   motion_vectors_over_pic_boundaries_flag : %d \n", sps->vui.motion_vectors_over_pic_boundaries_flag );
       printf("   max_bytes_per_pic_denom : %d \n", sps->vui.max_bytes_per_pic_denom );
-      printf("   max_bits_per_mb_denom : %d \n", sps->vui.max_bits_per_mb_denom );
+      printf("   max_bs_per_mb_denom : %d \n", sps->vui.max_bs_per_mb_denom );
       printf("   log2_max_mv_length_horizontal : %d \n", sps->vui.log2_max_mv_length_horizontal );
       printf("   log2_max_mv_length_vertical : %d \n", sps->vui.log2_max_mv_length_vertical );
       printf("   num_reorder_frames : %d \n", sps->vui.num_reorder_frames );
