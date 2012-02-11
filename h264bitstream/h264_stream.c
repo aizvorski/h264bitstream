@@ -277,12 +277,14 @@ int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
     nal->parsed = NULL;
     nal->sizeof_parsed = 0;
 
-    bs_free(b); // not needed, using stack allocation
+    bs_free(b);
 
     int rbsp_size = size;
     uint8_t* rbsp_buf = (uint8_t*)malloc(rbsp_size);
 
     rbsp_size = nal_to_rbsp(buf + 1, size - 1, rbsp_buf, rbsp_size);
+    if (rbsp_size < 0) { free(rbsp_buf); return -1; } // handle conversion error
+
     b = bs_new(rbsp_buf, rbsp_size);
 
     switch ( nal->nal_unit_type )
@@ -339,11 +341,12 @@ int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
             return 0;
     }
 
-    // TODO check for eof/read-beyond-end
-    bs_free(b);
-    free( rbsp_buf );
+    if (bs_overrun(b)) { bs_free(b); free(rbsp_buf); return -1; }
 
-    return rbsp_size;
+    bs_free(b); 
+    free(rbsp_buf);
+
+    return rbsp_size; // FIXME returns size of rbsp, not nal read
 }
 
 
@@ -1180,7 +1183,7 @@ int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
     bs_free(b);
 
     int rbsp_size = size*3/4; // NOTE this may have to be slightly smaller (3/4 smaller, worst case) in order to be guaranteed to fit
-    uint8_t* rbsp_buf = (uint8_t*)calloc(1, rbsp_size); // FIXME can use malloc
+    uint8_t* rbsp_buf = (uint8_t*)calloc(1, rbsp_size); // FIXME can use malloc?
     int nal_size = size;
 
     b = bs_new(rbsp_buf, rbsp_size);
@@ -1227,10 +1230,14 @@ int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
             return 0;
     }
 
+
+    if (bs_overrun(b)) { bs_free(b); free(rbsp_buf); return -1; }
+
     // now get the actual size used
-    rbsp_size = bs_pos(b); // TODO check for eof/write-beyond-end
+    rbsp_size = bs_pos(b);
 
     nal_size = rbsp_to_nal(rbsp_buf, rbsp_size, buf + 1, nal_size - 1) + 1;
+    if (nal_size < 0) { bs_free(b); free(rbsp_buf); return -1; }
 
     bs_free(b);
     free(rbsp_buf);
