@@ -1,8 +1,9 @@
 /* 
  * h264bitstream - a library for reading and writing H.264 video
  * Copyright (C) 2005-2007 Auroras Entertainment, LLC
+ * Copyright (C) 2008-2012 Avail-TVN
  * 
- * Written by Alex Izvorski <aizvorski@gmail.com>
+ * Written by Alex Izvorski <aizvorski@gmail.com> and Alex Giladi <alex.giladi@gmail.com>
  * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -342,6 +343,8 @@ int read_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int nal_size, slice_data_
 void read_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
 {
     int i;
+
+    // NOTE can't read directly into sps because seq_parameter_set_id not yet known and so sps is not selected
 
     int profile_idc = bs_read_u8(b);
     int constraint_set0_flag = bs_read_u1(b);
@@ -1638,7 +1641,7 @@ void write_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data, bs_
         }
 
         bs_write_bytes( b, slice_data->rbsp_buf, slice_data->rbsp_size ); 
-        return; // hack -- slice trailing bits already included...
+        return; // HACK slice trailing bits already included
     }
     //slice_data( ); /* all categories of slice_data( ) syntax */
     write_rbsp_slice_trailing_bits(h, b);

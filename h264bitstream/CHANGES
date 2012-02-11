@@ -1,3 +1,5 @@
+0.1.7 - in progress as of 2012-01-10
+
 0.1.6 - released 2007-06-03
 - initial support for SEI
 - rbsp_to_nal and nal_ro_rbsp conversion functions callable from the outside (also allows using any *_rbsp function directly as long as the appropriate conversion is performed)
