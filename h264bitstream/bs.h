@@ -117,7 +117,7 @@ static inline int bs_eof(bs_t* b) { if (b->p >= b->end) { return 1; } else { ret
 
 static inline int bs_overrun(bs_t* b) { if (b->p > b->end) { return 1; } else { return 0; } }
 
-static inline int bs_pos(bs_t* b) { return (b->p - b->start); }
+static inline int bs_pos(bs_t* b) { if (b->p > b->end) { return (b->end - b->start); } else { return (b->p - b->start); } }
 
 static inline int bs_bytes_left(bs_t* b) { return (b->end - b->p); }
 
