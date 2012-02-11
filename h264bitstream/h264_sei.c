@@ -23,6 +23,7 @@
 #include "h264_stream.h"
 #include "h264_sei.h"
 
+#include <stdio.h>
 #include <stdlib.h> // malloc
 #include <string.h> // memset
 
@@ -36,33 +37,49 @@ sei_t* sei_new()
 
 void sei_free(sei_t* s)
 {
-    if (s->payload != NULL) { free(s->payload); }
+    if ( s->payload != NULL ) free(s->payload);
     free(s);
 }
 
+void read_sei_end_bits( bit_shifter_t* b )
+{
+    // if the message doesn't end at a byte border
+    if ( !bits_byte_aligned( b ) )
+    {
+        if ( !bits_read_u1( b ) ) fprintf(stderr, "WARNING: bit_equal_to_one is 0!!!!\n");
+        while ( ! bits_byte_aligned( b ) )
+        {
+            if ( bits_read_u1( b ) ) fprintf(stderr, "WARNING: bit_equal_to_zero is 1!!!!\n");
+        }
+    }
+
+    read_rbsp_trailing_bits( b );
+}
+
 // D.1 SEI payload syntax
-void read_sei_payload( h264_stream_t* h, bs_t* b, int payloadType, int payloadSize)
+void read_sei_payload( h264_stream_t* h, bit_shifter_t* b, int payloadType, int payloadSize)
 {
     sei_t* s = h->sei;
 
     s->payload = malloc(payloadSize);
 
     int i;
-    for( i = 0; i < payloadSize; i++ )
-    {
-        s->payload[i] = bs_read_u(b, 8);
-    }
+
+    for ( i = 0; i < payloadSize; i++ )
+        s->payload[i] = bits_read_u(b, 8);
+        
+    read_sei_end_bits( b );
 }
 
 // D.1 SEI payload syntax
-void write_sei_payload( h264_stream_t* h, bs_t* b, int payloadType, int payloadSize)
+void write_sei_payload( h264_stream_t* h, bit_shifter_t* b, int payloadType, int payloadSize)
 {
     sei_t* s = h->sei;
 
     int i;
-    for( i = 0; i < payloadSize; i++ )
-    {
-        bs_write_u(b, 8, s->payload[i]);
-    }
+    for ( i = 0; i < s->payloadSize; i++ )
+        bits_write_u(b, 8, s->payload[i]);
 }
+
+
 
