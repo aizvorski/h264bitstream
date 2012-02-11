@@ -389,7 +389,7 @@ void read_filler_data_rbsp(h264_stream_t* h, bs_t* b);
 
 void read_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data, bs_t* b);
 void read_rbsp_slice_trailing_bits(h264_stream_t* h, bs_t* b);
-void read_rbsp_trailing_bits( bs_t* b );
+void read_rbsp_trailing_bits(h264_stream_t* h, bs_t* b);
 void read_slice_header(h264_stream_t* h, bs_t* b);
 void read_ref_pic_list_reordering(h264_stream_t* h, bs_t* b);
 void read_pred_weight_table(h264_stream_t* h, bs_t* b);

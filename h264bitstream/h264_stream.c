@@ -48,13 +48,12 @@ int is_slice_type(int slice_type, int cmp_type)
 h264_stream_t* h264_new()
 {
     h264_stream_t* h = (h264_stream_t*)calloc(1, sizeof(h264_stream_t));
-    int i;
 
     h->nal = (nal_t*)calloc(1, sizeof(nal_t));
 
     // initialize tables
-    for ( i = 0; i < 32; i++ ) h->sps_table[i] = (sps_t*)calloc(1, sizeof(sps_t));    
-    for ( i = 0; i < 256; i++ ) h->pps_table[i] = (pps_t*)calloc(1, sizeof(pps_t));
+    for ( int i = 0; i < 32; i++ ) { h->sps_table[i] = (sps_t*)calloc(1, sizeof(sps_t)); }
+    for ( int i = 0; i < 256; i++ ) { h->pps_table[i] = (pps_t*)calloc(1, sizeof(pps_t)); }
 
     h->sps = h->sps_table[0];
     h->pps = h->pps_table[0];
@@ -74,25 +73,22 @@ h264_stream_t* h264_new()
  */
 void h264_free(h264_stream_t* h)
 {
-    int i;
     free(h->nal);
-    //free(h->sps);
-    //free(h->pps);
 
-    for ( i = 0; i < 32; i++ ) free( h->sps_table[i] );
-    for ( i = 0; i < 256; i++ ) free( h->pps_table[i] ); 
+    for ( int i = 0; i < 32; i++ ) { free( h->sps_table[i] ); }
+    for ( int i = 0; i < 256; i++ ) { free( h->pps_table[i] ); }
 
     free(h->aud);
-    free(h->sh);
     if(h->seis != NULL)
     {
-        for( i = 0; i < h->num_seis; i++)
+        for( int i = 0; i < h->num_seis; i++ )
         {
             sei_t* sei = h->seis[i];
             sei_free(sei);
         }
         free(h->seis);
     }
+    free(h->sh);
     free(h);
 }
 
@@ -146,18 +142,12 @@ int find_nal_unit(uint8_t* buf, int size, int* nal_start, int* nal_end)
 }
 
 
-// int more_rbsp_data(h264_stream_t* h, bs_t* b) { return !bs_eof(b); }
-
 int more_rbsp_data(h264_stream_t* h, bs_t* b) 
 {
-    if ( bs_eof(b) ) return 0;    
-    return(!!( bs_peek_u1(b) == 0 )); // if next bit is 1, we've reached the stop bit...
+    if ( bs_eof(b) ) { return 0; }
+    if ( bs_peek_u1(b) == 1 ) { return 0; } // if next bit is 1, we've reached the stop bit
+    return 1;
 }
-
-uint32_t next_bits(bs_t* b, int n) 
-{
-    return bs_next_bits( b, n ); 
-} 
 
 /**
    Convert RBSP data to NAL data (Annex B format).
@@ -172,9 +162,9 @@ uint32_t next_bits(bs_t* b, int n)
 // 7.4.1.1 Encapsulation of an SODB within an RBSP
 int rbsp_to_nal(const uint8_t* rbsp_buf, int rbsp_size, uint8_t* nal_buf, int nal_buf_size)
 {
+    int i;
     int j     = 0;
     int count = 0;
-    int i;
 
     for ( i = 0; i < rbsp_size ; i++ )
     {
@@ -212,7 +202,9 @@ int rbsp_to_nal(const uint8_t* rbsp_buf, int rbsp_size, uint8_t* nal_buf, int na
 // 7.4.1.1 Encapsulation of an SODB within an RBSP
 int nal_to_rbsp(uint8_t* nal_buf, int nal_size, uint8_t* rbsp_buf, int rbsp_size)
 {
-  int i, j = 0, count = 0;
+    int i;
+    int j     = 0;
+    int count = 0;
   
   for( i = 0; i < nal_size; i++ )
   { 
@@ -448,9 +440,7 @@ void read_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
     {
         read_vui_parameters(h, b);
     }
-    read_rbsp_trailing_bits( b );
-
-    
+    read_rbsp_trailing_bits(h, b);
 }
 
 
@@ -458,7 +448,7 @@ void read_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
 void read_scaling_list(bs_t* b, int* scalingList, int sizeOfScalingList, int useDefaultScalingMatrixFlag )
 {
     int j;
-    if(!scalingList)
+    if(scalingList == NULL)
     {
         return;
     }
@@ -681,7 +671,7 @@ void read_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
         }
         pps->second_chroma_qp_index_offset = bs_read_se(b);
     }
-    read_rbsp_trailing_bits( b );
+    read_rbsp_trailing_bits(h, b);
 }
 
 //7.3.2.3 Supplemental enhancement information RBSP syntax
@@ -701,7 +691,7 @@ void read_sei_rbsp(h264_stream_t* h, bs_t* b)
         h->sei = h->seis[h->num_seis - 1];
         read_sei_message(h, b);
     } while( more_rbsp_data(h, b) );
-    read_rbsp_trailing_bits( b );
+    read_rbsp_trailing_bits(h, b);
 }
 
 int _read_ff_coded_number(bs_t* b)
@@ -728,7 +718,7 @@ void read_sei_message(h264_stream_t* h, bs_t* b)
 void read_access_unit_delimiter_rbsp(h264_stream_t* h, bs_t* b)
 {
     h->aud->primary_pic_type = bs_read_u(b,3);
-    read_rbsp_trailing_bits( b );
+    read_rbsp_trailing_bits(h, b);
 }
 
 //7.3.2.5 End of sequence RBSP syntax
@@ -744,11 +734,11 @@ void read_end_of_stream_rbsp(h264_stream_t* h, bs_t* b)
 //7.3.2.7 Filler data RBSP syntax
 void read_filler_data_rbsp(h264_stream_t* h, bs_t* b)
 {
-    while( next_bits(b, 8) == 0xFF )
+    while( bs_next_bits(b, 8) == 0xFF )
     {
         int ff_byte = bs_read_f(b,8);  // equal to 0xFF
     }
-    read_rbsp_trailing_bits( b );
+    read_rbsp_trailing_bits(h, b);
 }
 
 //7.3.2.8 Slice layer without partitioning RBSP syntax
@@ -807,7 +797,7 @@ more_rbsp_trailing_data(h264_stream_t* h, bs_t* b) { return !bs_eof(b); }
 //7.3.2.10 RBSP slice trailing bits syntax
 void read_rbsp_slice_trailing_bits(h264_stream_t* h, bs_t* b)
 {
-    read_rbsp_trailing_bits( b );
+    read_rbsp_trailing_bits(h, b);
     int cabac_zero_word;
     if( h->pps->entropy_coding_mode_flag )
     {
@@ -819,7 +809,7 @@ void read_rbsp_slice_trailing_bits(h264_stream_t* h, bs_t* b)
 }
 
 //7.3.2.11 RBSP trailing bits syntax
-void read_rbsp_trailing_bits( bs_t* b )
+void read_rbsp_trailing_bits(h264_stream_t* h, bs_t* b)
 {
     int rbsp_stop_one_bit = bs_read_u1( b ); // equal to 1
 
@@ -1625,7 +1615,7 @@ void write_end_of_stream_rbsp(h264_stream_t* h, bs_t* b)
 void write_filler_data_rbsp(h264_stream_t* h, bs_t* b)
 {
     int ff_byte = 0xFF; //FIXME
-    while( next_bits(b, 8) == 0xFF )
+    while( bs_next_bits(b, 8) == 0xFF )
     {
         bs_write_f(b,8, ff_byte);  // equal to 0xFF
     }
