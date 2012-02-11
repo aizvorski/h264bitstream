@@ -206,36 +206,36 @@ int nal_to_rbsp(uint8_t* nal_buf, int nal_size, uint8_t* rbsp_buf, int rbsp_size
     int j     = 0;
     int count = 0;
   
-  for( i = 0; i < nal_size; i++ )
-  { 
-    //in NAL unit, 0x000000, 0x000001 or 0x000002 shall not occur at any byte-aligned position
-    if( ( count == 2 ) && ( nal_buf[i] < 0x03) ) return -1;
+    for( i = 0; i < nal_size; i++ )
+    { 
+        //in NAL unit, 0x000000, 0x000001 or 0x000002 shall not occur at any byte-aligned position
+        if( ( count == 2 ) && ( nal_buf[i] < 0x03) ) return -1;
 
-    if( ( count == 2 ) && ( nal_buf[i] == 0x03) )
-    {
-      //check the 4th byte after 0x000003, except when cabac_zero_word is used, in which case the last three bytes of this NAL unit must be 0x000003
-      if((i < nal_size - 1) && (nal_buf[i+1] > 0x03))
-        return -1;
-      //if cabac_zero_word is used, the final byte of this NAL unit(0x03) is discarded, and the last two bytes of RBSP must be 0x0000
-      if(i == nal_size - 1)
-        return j;
+        if( ( count == 2 ) && ( nal_buf[i] == 0x03) )
+        {
+            //check the 4th byte after 0x000003, except when cabac_zero_word is used, in which case the last three bytes of this NAL unit must be 0x000003
+            if((i < nal_size - 1) && (nal_buf[i+1] > 0x03))
+                return -1;
+            //if cabac_zero_word is used, the final byte of this NAL unit(0x03) is discarded, and the last two bytes of RBSP must be 0x0000
+            if(i == nal_size - 1)
+                return j;
 
-      i++;
-      count = 0;
+            i++;
+            count = 0;
+        }
+        rbsp_buf[j] = nal_buf[i];
+        if(nal_buf[i] == 0x00)
+        {
+            count++;
+        }
+        else
+        {
+            count = 0;
+        }
+        j++;
     }
-    rbsp_buf[j] = nal_buf[i];
-    if(nal_buf[i] == 0x00)
-    {
-          count++;
-    }
-    else
-    {
-          count = 0;
-    }
-    j++;
-  }
 
-  return j;
+    return j;
 }
 
 /**
@@ -267,7 +267,7 @@ int read_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int nal_size, slice_data_
     nal->parsed = NULL;
     nal->sizeof_parsed = 0;
 
-  //  bs_free(b); -- not needed, using stack allocation
+    // bs_free(b); -- not needed, using stack allocation
 
     // uint8_t* rbsp_buf = (uint8_t*)malloc(nal_size);
     uint8_t rbsp_buf[nal_size];
@@ -330,9 +330,9 @@ int read_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int nal_size, slice_data_
     }
 
     // TODO check for eof/read-beyond-end
-    // bs_free(b); -- not needed if we use stack allocation
+    // bs_free(b); // not needed if we use stack allocation
 
-    // free( rbsp_buf ); -- not needed if we use stack allocation
+    // free( rbsp_buf ); // not needed if we use stack allocation
 
     return rbsp_size;
 }
@@ -1039,7 +1039,7 @@ void read_pred_weight_table(h264_stream_t* h, bs_t* b)
 void read_dec_ref_pic_marking(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
-// FIXME: shouldn't that be an array inst of overwriting same thing 
+    // FIXME should be an array instead of overwriting same thing 
     if( h->nal->nal_unit_type == 5 )
     {
         sh->drpm.no_output_of_prior_pics_flag = bs_read_u1(b);
@@ -1924,7 +1924,7 @@ void write_pred_weight_table(h264_stream_t* h, bs_t* b)
 void write_dec_ref_pic_marking(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
-// FIXME: shouldn't that be an array inst of overwriting same thing 
+    // FIXME should be an array instead of overwriting same thing 
     if( h->nal->nal_unit_type == 5 )
     {
         bs_write_u1(b, sh->drpm.no_output_of_prior_pics_flag);
