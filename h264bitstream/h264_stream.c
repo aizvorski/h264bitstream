@@ -1961,9 +1961,13 @@ void debug_sps(sps_t* sps)
     printf(" cpb_cnt_minus1 : %d \n", sps->hrd.cpb_cnt_minus1 );
     printf(" bit_rate_scale : %d \n", sps->hrd.bit_rate_scale );
     printf(" cpb_size_scale : %d \n", sps->hrd.cpb_size_scale );
-    //  printf("bit_rate_value_minus1[32] : %d \n", sps->hrd.bit_rate_value_minus1[32] ); // up to cpb_cnt_minus1, which is <= 31
-    //  printf("cpb_size_value_minus1[32] : %d \n", sps->hrd.cpb_size_value_minus1[32] );
-    //  printf("cbr_flag[32] : %d \n", sps->hrd.cbr_flag[32] );
+    int SchedSelIdx;
+    for( SchedSelIdx = 0; SchedSelIdx <= sps->hrd.cpb_cnt_minus1; SchedSelIdx++ )
+    {
+        printf("   bit_rate_value_minus1[%d] : %d \n", SchedSelIdx, sps->hrd.bit_rate_value_minus1[SchedSelIdx] ); // up to cpb_cnt_minus1, which is <= 31
+        printf("   cpb_size_value_minus1[%d] : %d \n", SchedSelIdx, sps->hrd.cpb_size_value_minus1[SchedSelIdx] );
+        printf("   cbr_flag[%d] : %d \n", SchedSelIdx, sps->hrd.cbr_flag[SchedSelIdx] );
+    }
     printf(" initial_cpb_removal_delay_length_minus1 : %d \n", sps->hrd.initial_cpb_removal_delay_length_minus1 );
     printf(" cpb_removal_delay_length_minus1 : %d \n", sps->hrd.cpb_removal_delay_length_minus1 );
     printf(" dpb_output_delay_length_minus1 : %d \n", sps->hrd.dpb_output_delay_length_minus1 );
