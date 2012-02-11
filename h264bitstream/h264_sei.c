@@ -41,7 +41,7 @@ void sei_free(sei_t* s)
     free(s);
 }
 
-void read_sei_end_bits( bs_t* b )
+void read_sei_end_bits(h264_stream_t* h, bs_t* b )
 {
     // if the message doesn't end at a byte border
     if ( !bs_byte_aligned( b ) )
@@ -53,11 +53,11 @@ void read_sei_end_bits( bs_t* b )
         }
     }
 
-    read_rbsp_trailing_bits( b );
+    read_rbsp_trailing_bits(h, b);
 }
 
 // D.1 SEI payload syntax
-void read_sei_payload( h264_stream_t* h, bs_t* b, int payloadType, int payloadSize)
+void read_sei_payload(h264_stream_t* h, bs_t* b, int payloadType, int payloadSize)
 {
     sei_t* s = h->sei;
 
@@ -68,11 +68,11 @@ void read_sei_payload( h264_stream_t* h, bs_t* b, int payloadType, int payloadSi
     for ( i = 0; i < payloadSize; i++ )
         s->payload[i] = bs_read_u(b, 8);
         
-    read_sei_end_bits( b );
+    read_sei_end_bits(h, b);
 }
 
 // D.1 SEI payload syntax
-void write_sei_payload( h264_stream_t* h, bs_t* b, int payloadType, int payloadSize)
+void write_sei_payload(h264_stream_t* h, bs_t* b, int payloadType, int payloadSize)
 {
     sei_t* s = h->sei;
 
