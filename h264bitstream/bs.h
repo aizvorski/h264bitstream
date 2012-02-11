@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef _BS_H
-#define _BS_H        1
+#ifndef _H264_BS_H
+#define _H264_BS_H        1
 
 #include <stdint.h>
 #include <stdlib.h>

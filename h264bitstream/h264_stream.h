@@ -20,15 +20,13 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <stdint.h>
-
 #ifndef _H264_STREAM_H
 #define _H264_STREAM_H        1
 
+#include <stdint.h>
 #include <assert.h>
 
 #include "bs.h"
-
 #include "h264_sei.h"
 
 #ifdef __cplusplus

@@ -25,6 +25,8 @@
 #ifndef _H264_SEI_H
 #define _H264_SEI_H        1
 
+#include <stdint.h>
+
 #include "bs.h"
 
 #ifdef __cplusplus
