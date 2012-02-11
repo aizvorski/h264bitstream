@@ -1,4 +1,9 @@
 0.1.7 - in progress as of 2012-01-10
+- added correct handling of multiple pps/sps
+- fixed pwt read/write
+- added sei buffering, picture timing read/write
+- bug fixes in nal <-> rbsp translation
+- read/write slice data correctly (as array of bytes only, not parsed)
 
 0.1.6 - released 2007-06-03
 - initial support for SEI

@@ -152,16 +152,18 @@ int more_rbsp_data(h264_stream_t* h, bs_t* b)
 
 /**
    Convert RBSP data to NAL data (Annex B format).
-   The size of nal_data must be 4/3 * the size of the rbsp data (rounded up) to guarantee the output will fit.
-   If that is not true, output may be truncated.  If that is true, there is no possible error during this conversion.
+   The size of nal_buf must be 4/3 * the size of the rbsp_buf (rounded up) to guarantee the output will fit.
+   If that is not true, output may be truncated and an error will be returned.
+   If that is true, there is no possible error during this conversion.
    @param[in] rbsp_buf   the rbsp data
-   @param[in] rbsp_size  pointer to the size of the rbsp data
-   @param[in,out] nal_buf   allocated memory in which to put the nal data
-   @param[in,out] nal_buf_size  as input, pointer to the maximum size of the nal data; as output, filled in with the size actually written
+   @param[in] rbsp_size  the size of the rbsp data
+   @param[in,out] nal_buf   allocated memory for the nal data
+   @param[in] nal_size      size of the allocated memory for the nal data
+   @return  actual size of nal data, or -1 on error
  */
 // 7.3.1 NAL unit syntax
 // 7.4.1.1 Encapsulation of an SODB within an RBSP
-int rbsp_to_nal(const uint8_t* rbsp_buf, int rbsp_size, uint8_t* nal_buf, int nal_buf_size)
+int rbsp_to_nal(const uint8_t* rbsp_buf, int rbsp_size, uint8_t* nal_buf, int nal_size)
 {
     int i;
     int j     = 0;
@@ -169,9 +171,13 @@ int rbsp_to_nal(const uint8_t* rbsp_buf, int rbsp_size, uint8_t* nal_buf, int na
 
     for ( i = 0; i < rbsp_size ; i++ )
     {
-        if ( j == nal_buf_size ) return -1; // we screwed smth -- not enough space
+        if ( j >= nal_size ) 
+        {
+            // error, not enough space
+            return -1;
+        }
 
-        if ( ( count == 2 ) && !(rbsp_buf[i] & 0xFC) )
+        if ( ( count == 2 ) && !(rbsp_buf[i] & 0xFC) ) // HACK 0xFC
         {
             nal_buf[j] = 0x03;
             j++;
@@ -192,12 +198,14 @@ int rbsp_to_nal(const uint8_t* rbsp_buf, int rbsp_size, uint8_t* nal_buf, int na
 }
 /**
    Convert NAL data (Annex B format) to RBSP data.
-   The size of rbsp_data must be the same as size of the nal data to guarantee the output will fit.
-   If that is not true, output may be truncated.  If that is true, there is no possible error during this conversion.
+   The size of rbsp_buf must be the same as size of the nal_buf to guarantee the output will fit.
+   If that is not true, output may be truncated and an error will be returned. 
+   Additionally, certain byte sequences in the input nal_buf are not allowed in the spec and also cause the conversion to fail and an error to be returned.
    @param[in] nal_buf   the nal data
    @param[in] nal_size  pointer to the size of the nal data
-   @param[in,out] rbsp_buf   allocated memory in which to put the rbsp data
-   @param[in,out] rbsp_size  as input, pointer to the maximum size of the rbsp data; as output, filled in with the size actually written
+   @param[in,out] rbsp_buf   allocated memory for the rbsp data
+   @param[in] rbsp_size  size of the allocated memory for the rbsp data
+   @return  actual size of rbsp data, or -1 on error
  */
 // 7.3.1 NAL unit syntax
 // 7.4.1.1 Encapsulation of an SODB within an RBSP
@@ -209,17 +217,25 @@ int nal_to_rbsp(uint8_t* nal_buf, int nal_size, uint8_t* rbsp_buf, int rbsp_size
   
     for( i = 0; i < nal_size; i++ )
     { 
-        //in NAL unit, 0x000000, 0x000001 or 0x000002 shall not occur at any byte-aligned position
-        if( ( count == 2 ) && ( nal_buf[i] < 0x03) ) return -1;
+        // in NAL unit, 0x000000, 0x000001 or 0x000002 shall not occur at any byte-aligned position
+        if( ( count == 2 ) && ( nal_buf[i] < 0x03) ) 
+        {
+            return -1;
+        }
 
         if( ( count == 2 ) && ( nal_buf[i] == 0x03) )
         {
-            //check the 4th byte after 0x000003, except when cabac_zero_word is used, in which case the last three bytes of this NAL unit must be 0x000003
+            // check the 4th byte after 0x000003, except when cabac_zero_word is used, in which case the last three bytes of this NAL unit must be 0x000003
             if((i < nal_size - 1) && (nal_buf[i+1] > 0x03))
+            {
                 return -1;
-            //if cabac_zero_word is used, the final byte of this NAL unit(0x03) is discarded, and the last two bytes of RBSP must be 0x0000
+            }
+
+            // if cabac_zero_word is used, the final byte of this NAL unit(0x03) is discarded, and the last two bytes of RBSP must be 0x0000
             if(i == nal_size - 1)
+            {
                 return j;
+            }
 
             i++;
             count = 0;
@@ -254,13 +270,11 @@ int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
     return read_nal_unit_rbsp(h,buf,size,NULL);
 }
 
-int read_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int nal_size, slice_data_rbsp_t* slice_data)
+int read_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int size, slice_data_rbsp_t* slice_data)
 {
     nal_t* nal = h->nal;
 
-    bs_t bs;
-
-    bs_t* b = bs_init(&bs, buf, nal_size);
+    bs_t* b = bs_new(buf, size);
 
     nal->forbidden_zero_bit = bs_read_f(b,1);
     nal->nal_ref_idc = bs_read_u(b,2);
@@ -268,13 +282,13 @@ int read_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int nal_size, slice_data_
     nal->parsed = NULL;
     nal->sizeof_parsed = 0;
 
-    // bs_free(b); -- not needed, using stack allocation
+    bs_free(b); // not needed, using stack allocation
 
-    // uint8_t* rbsp_buf = (uint8_t*)malloc(nal_size);
-    uint8_t rbsp_buf[nal_size];
+    int rbsp_size = size;
+    uint8_t* rbsp_buf = (uint8_t*)malloc(rbsp_size);
 
-    int rbsp_size = nal_to_rbsp(buf + 1, nal_size - 1, rbsp_buf, nal_size);
-    b = bs_init( &bs, rbsp_buf, rbsp_size);
+    rbsp_size = nal_to_rbsp(buf + 1, size - 1, rbsp_buf, rbsp_size);
+    b = bs_new(rbsp_buf, rbsp_size);
 
     switch ( nal->nal_unit_type )
     {
@@ -331,9 +345,8 @@ int read_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int nal_size, slice_data_
     }
 
     // TODO check for eof/read-beyond-end
-    // bs_free(b); // not needed if we use stack allocation
-
-    // free( rbsp_buf ); // not needed if we use stack allocation
+    bs_free(b);
+    free( rbsp_buf );
 
     return rbsp_size;
 }
@@ -1175,10 +1188,10 @@ int write_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int size, slice_data_rbs
     bs_free(b);
 
     int rbsp_size = size*3/4; // NOTE this may have to be slightly smaller (3/4 smaller, worst case) in order to be guaranteed to fit
-    uint8_t* rbsp_buf = (uint8_t*)calloc(1,rbsp_size);
+    uint8_t* rbsp_buf = (uint8_t*)calloc(1, rbsp_size); // FIXME can use malloc
     int nal_size = size;
 
-    b = bs_new(rbsp_buf, rbsp_size); // FIXME DEPRECATED reinit of an already inited bs
+    b = bs_new(rbsp_buf, rbsp_size);
 
     switch ( nal->nal_unit_type )
     {
