@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 
     if (argc < 2)
     {
-        printf("h264_analyze, version 0.1.6\n");
+        printf("h264_analyze, version 0.1.7\n");
         printf("Usage: \n");
         printf("  h264_analyze stream.h264\n");
         printf("where stream.h264 is a raw H264 stream, as produced by JM or x264\n");
