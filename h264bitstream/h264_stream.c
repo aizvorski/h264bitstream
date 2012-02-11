@@ -931,7 +931,8 @@ void read_slice_header(h264_stream_t* h, bs_t* b)
 void read_ref_pic_list_reordering(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
-// FIXME: shouldn't that be an array inst of overwriting same thing 
+    // FIXME should be an array
+
     if( ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
     {
         sh->rplr.ref_pic_list_reordering_flag_l0 = bs_read_u1(b);
@@ -1039,7 +1040,8 @@ void read_pred_weight_table(h264_stream_t* h, bs_t* b)
 void read_dec_ref_pic_marking(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
-    // FIXME should be an array instead of overwriting same thing 
+    // FIXME should be an array
+
     if( h->nal->nal_unit_type == 5 )
     {
         sh->drpm.no_output_of_prior_pics_flag = bs_read_u1(b);
@@ -1816,6 +1818,7 @@ void write_slice_header(h264_stream_t* h, bs_t* b)
 void write_ref_pic_list_reordering(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
+    // FIXME should be an array
 
     if( ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_I ) && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_SI ) )
     {
@@ -1924,7 +1927,8 @@ void write_pred_weight_table(h264_stream_t* h, bs_t* b)
 void write_dec_ref_pic_marking(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
-    // FIXME should be an array instead of overwriting same thing 
+    // FIXME should be an array
+
     if( h->nal->nal_unit_type == 5 )
     {
         bs_write_u1(b, sh->drpm.no_output_of_prior_pics_flag);
