@@ -113,7 +113,7 @@ typedef struct
         int bitstream_restriction_flag;
           int motion_vectors_over_pic_boundaries_flag;
           int max_bytes_per_pic_denom;
-          int max_bs_per_mb_denom;
+          int max_bits_per_mb_denom;
           int log2_max_mv_length_horizontal;
           int log2_max_mv_length_vertical;
           int num_reorder_frames;

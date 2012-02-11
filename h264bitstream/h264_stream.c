@@ -542,7 +542,7 @@ void read_vui_parameters(h264_stream_t* h, bs_t* b)
     {
         sps->vui.motion_vectors_over_pic_boundaries_flag = bs_read_u1(b);
         sps->vui.max_bytes_per_pic_denom = bs_read_ue(b);
-        sps->vui.max_bs_per_mb_denom = bs_read_ue(b);
+        sps->vui.max_bits_per_mb_denom = bs_read_ue(b);
         sps->vui.log2_max_mv_length_horizontal = bs_read_ue(b);
         sps->vui.log2_max_mv_length_vertical = bs_read_ue(b);
         sps->vui.num_reorder_frames = bs_read_ue(b);
@@ -1425,7 +1425,7 @@ write_vui_parameters(h264_stream_t* h, bs_t* b)
     {
         bs_write_u1(b, sps->vui.motion_vectors_over_pic_boundaries_flag);
         bs_write_ue(b, sps->vui.max_bytes_per_pic_denom);
-        bs_write_ue(b, sps->vui.max_bs_per_mb_denom);
+        bs_write_ue(b, sps->vui.max_bits_per_mb_denom);
         bs_write_ue(b, sps->vui.log2_max_mv_length_horizontal);
         bs_write_ue(b, sps->vui.log2_max_mv_length_vertical);
         bs_write_ue(b, sps->vui.num_reorder_frames);
@@ -2092,7 +2092,7 @@ void debug_sps(sps_t* sps)
     printf(" bitstream_restriction_flag : %d \n", sps->vui.bitstream_restriction_flag );
       printf("   motion_vectors_over_pic_boundaries_flag : %d \n", sps->vui.motion_vectors_over_pic_boundaries_flag );
       printf("   max_bytes_per_pic_denom : %d \n", sps->vui.max_bytes_per_pic_denom );
-      printf("   max_bs_per_mb_denom : %d \n", sps->vui.max_bs_per_mb_denom );
+      printf("   max_bits_per_mb_denom : %d \n", sps->vui.max_bits_per_mb_denom );
       printf("   log2_max_mv_length_horizontal : %d \n", sps->vui.log2_max_mv_length_horizontal );
       printf("   log2_max_mv_length_vertical : %d \n", sps->vui.log2_max_mv_length_vertical );
       printf("   num_reorder_frames : %d \n", sps->vui.num_reorder_frames );
