@@ -23,11 +23,20 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#if !defined(MINGW)
 #include <inttypes.h>
+#else
+#define PRId64 "lld"
+#define PRIX64 "llX"
+#endif
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+
+#if !defined(MINGW)
+#define O_BINARY 0
+#endif
 
 #define BUFSIZE 8*1024*1024
 
@@ -46,8 +55,8 @@ int main(int argc, char *argv[])
         printf("where stream.h264 is a raw H264 stream, as produced by JM or x264\n");
     }
 
-    int fd = open(argv[1], O_RDONLY);
-    if (fd == -1) { perror("could not open file"); exit(0); }
+    int fd = open(argv[1], O_RDONLY | O_BINARY);
+    if (fd == -1) { printf("!! Error: could not open file: %s \n", strerror(errno)); exit(0); }
 
     int rsz = 0;
     int sz = 0;
@@ -58,6 +67,8 @@ int main(int argc, char *argv[])
 
     while ((rsz = read(fd, buf + sz, BUFSIZE - sz)))
     {
+        if (rsz < 0) { printf("!! Error: read failed: %s \n", strerror(errno)); break; }
+
         sz += rsz;
 
         while (find_nal_unit(p, sz, &nal_start, &nal_end) > 0)
