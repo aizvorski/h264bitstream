@@ -267,11 +267,6 @@ int nal_to_rbsp(uint8_t* nal_buf, int nal_size, uint8_t* rbsp_buf, int rbsp_size
 //7.3.1 NAL unit syntax
 int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
 {
-    return read_nal_unit_rbsp(h,buf,size,NULL);
-}
-
-int read_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int size, slice_data_rbsp_t* slice_data)
-{
     nal_t* nal = h->nal;
 
     bs_t* b = bs_new(buf, size);
@@ -295,7 +290,7 @@ int read_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int size, slice_data_rbsp
         case NAL_UNIT_TYPE_CODED_SLICE_IDR:
         case NAL_UNIT_TYPE_CODED_SLICE_NON_IDR:  
         case NAL_UNIT_TYPE_CODED_SLICE_AUX:
-            read_slice_layer_rbsp(h, slice_data, b);
+            read_slice_layer_rbsp(h, b);
             nal->parsed = h->sh;
             nal->sizeof_parsed = sizeof(slice_header_t);
             break;
@@ -758,9 +753,11 @@ void read_filler_data_rbsp(h264_stream_t* h, bs_t* b)
 }
 
 //7.3.2.8 Slice layer without partitioning RBSP syntax
-void read_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data,  bs_t* b)
+void read_slice_layer_rbsp(h264_stream_t* h,  bs_t* b)
 {
     read_slice_header(h, b);
+    slice_data_rbsp_t* slice_data = h->slice_data;
+
     if ( slice_data != NULL )
     {
         if ( slice_data->rbsp_buf != NULL ) free( slice_data->rbsp_buf ); 
@@ -1172,11 +1169,6 @@ slice_data( )
 //7.3.1 NAL unit syntax
 int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
 {
-    return write_nal_unit_rbsp( h, buf, size, NULL );
-}
-
-int write_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int size, slice_data_rbsp_t* slice_data)
-{
     nal_t* nal = h->nal;
 
     bs_t* b = bs_new(buf, size);
@@ -1198,7 +1190,7 @@ int write_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int size, slice_data_rbs
         case NAL_UNIT_TYPE_CODED_SLICE_IDR:
         case NAL_UNIT_TYPE_CODED_SLICE_NON_IDR:  
         case NAL_UNIT_TYPE_CODED_SLICE_AUX:
-            write_slice_layer_rbsp(h, slice_data, b);
+            write_slice_layer_rbsp(h, b);
             break;
 
         case NAL_UNIT_TYPE_SEI:
@@ -1641,9 +1633,11 @@ void write_filler_data_rbsp(h264_stream_t* h, bs_t* b)
 }
 
 //7.3.2.8 Slice layer without partitioning RBSP syntax
-void write_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data, bs_t* b)
+void write_slice_layer_rbsp(h264_stream_t* h, bs_t* b)
 {
     write_slice_header(h, b);
+    slice_data_rbsp_t* slice_data = h->slice_data;
+
     if ( slice_data != NULL )
     {
 

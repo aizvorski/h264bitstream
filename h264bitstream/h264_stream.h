@@ -330,6 +330,12 @@ typedef struct
 } sei_picture_timing_t;
 
 
+typedef struct
+{
+  int rbsp_size;
+  uint8_t* rbsp_buf;
+} slice_data_rbsp_t;
+
 /**
    H264 stream
    Contains data structures for all NAL types that can be handled by this library.  
@@ -346,18 +352,13 @@ typedef struct
     sei_t* sei; //This is a TEMP pointer at whats in h->seis...    
     int num_seis;
     slice_header_t* sh;
+    slice_data_rbsp_t* slice_data;
 
     sps_t* sps_table[32];
     pps_t* pps_table[256];
     sei_t** seis;
 
 } h264_stream_t;
-
-typedef struct
-{
-  int rbsp_size;
-  uint8_t* rbsp_buf;
-} slice_data_rbsp_t;
 
 h264_stream_t* h264_new();
 void h264_free(h264_stream_t* h);
@@ -370,7 +371,6 @@ int rbsp_to_nal(const uint8_t* rbsp_buf, int rbsp_size, uint8_t* nal_buf, int na
 int nal_to_rbsp(uint8_t* nal_buf, int nal_size, uint8_t* rbsp_buf, int rbsp_size);
 
 int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size);
-int read_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int size, slice_data_rbsp_t* slice_data);
 
 void read_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b);
 void read_scaling_list(bs_t* b, int* scalingList, int sizeOfScalingList, int useDefaultScalingMatrixFlag );
@@ -386,7 +386,7 @@ void read_end_of_seq_rbsp(h264_stream_t* h, bs_t* b);
 void read_end_of_stream_rbsp(h264_stream_t* h, bs_t* b);
 void read_filler_data_rbsp(h264_stream_t* h, bs_t* b);
 
-void read_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data, bs_t* b);
+void read_slice_layer_rbsp(h264_stream_t* h, bs_t* b);
 void read_rbsp_slice_trailing_bits(h264_stream_t* h, bs_t* b);
 void read_rbsp_trailing_bits(h264_stream_t* h, bs_t* b);
 void read_slice_header(h264_stream_t* h, bs_t* b);
@@ -397,7 +397,6 @@ void read_dec_ref_pic_marking(h264_stream_t* h, bs_t* b);
 int more_rbsp_trailing_data(h264_stream_t* h, bs_t* b);
 
 int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size);
-int write_nal_unit_rbsp(h264_stream_t* h, uint8_t* buf, int size, slice_data_rbsp_t* slice_data);
 
 void write_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b);
 void write_scaling_list(bs_t* b, int* scalingList, int sizeOfScalingList, int useDefaultScalingMatrixFlag );
@@ -413,7 +412,7 @@ void write_end_of_seq_rbsp(h264_stream_t* h, bs_t* b);
 void write_end_of_stream_rbsp(h264_stream_t* h, bs_t* b);
 void write_filler_data_rbsp(h264_stream_t* h, bs_t* b);
 
-void write_slice_layer_rbsp(h264_stream_t* h, slice_data_rbsp_t* slice_data, bs_t* b);
+void write_slice_layer_rbsp(h264_stream_t* h, bs_t* b);
 void write_rbsp_slice_trailing_bits(h264_stream_t* h, bs_t* b);
 void write_rbsp_trailing_bits(h264_stream_t* h, bs_t* b);
 void write_slice_header(h264_stream_t* h, bs_t* b);
