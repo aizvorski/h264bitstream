@@ -1,19 +1,19 @@
-/*
+/* 
  * h264bitstream - a library for reading and writing H.264 video
  * Copyright (C) 2005-2007 Auroras Entertainment, LLC
- *
+ * 
  * Written by Alex Izvorski <aizvorski@gmail.com>
- *
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *
+ * 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
@@ -111,11 +111,11 @@ int find_nal_unit(uint8_t* buf, int size, int* nal_start, int* nal_end)
     // find start
     *nal_start = 0;
     *nal_end = 0;
-
+    
     i = 0;
     while (   //( next_bits( 24 ) != 0x000001 && next_bits( 32 ) != 0x00000001 )
-        (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0x01) &&
-        (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0 || buf[i+3] != 0x01)
+        (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0x01) && 
+        (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0 || buf[i+3] != 0x01) 
         )
     {
         i++; // skip leading zero
@@ -130,17 +130,17 @@ int find_nal_unit(uint8_t* buf, int size, int* nal_start, int* nal_end)
     if  (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0x01) { /* error, should never happen */ return 0; }
     i+= 3;
     *nal_start = i;
-
+    
     while (   //( next_bits( 24 ) != 0x000000 && next_bits( 24 ) != 0x000001 )
-        (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0) &&
-        (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0x01)
+        (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0) && 
+        (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0x01) 
         )
     {
         i++;
         // FIXME the next line fails when reading a nal that ends exactly at the end of the data
         if (i+3 >= size) { *nal_end = size; return -1; } // did not find nal end, stream ended first
     }
-
+    
     *nal_end = i;
     return (*nal_end - *nal_start);
 }
@@ -168,7 +168,8 @@ uint32_t next_bits(bs_t* b, int n)
    @param[in,out] nal_buf   allocated memory in which to put the nal data
    @param[in,out] nal_buf_size  as input, pointer to the maximum size of the nal data; as output, filled in with the size actually written
  */
-
+// 7.3.1 NAL unit syntax
+// 7.4.1.1 Encapsulation of an SODB within an RBSP
 int rbsp_to_nal(const uint8_t* rbsp_buf, int rbsp_size, uint8_t* nal_buf, int nal_buf_size)
 {
     int j     = 0;
@@ -207,7 +208,8 @@ int rbsp_to_nal(const uint8_t* rbsp_buf, int rbsp_size, uint8_t* nal_buf, int na
    @param[in,out] rbsp_buf   allocated memory in which to put the rbsp data
    @param[in,out] rbsp_size  as input, pointer to the maximum size of the rbsp data; as output, filled in with the size actually written
  */
-  
+// 7.3.1 NAL unit syntax
+// 7.4.1.1 Encapsulation of an SODB within an RBSP
 int nal_to_rbsp(uint8_t* nal_buf, int nal_size, uint8_t* rbsp_buf, int rbsp_size)
 {
   int i, j = 0, count = 0;
@@ -608,7 +610,7 @@ void read_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
     pps->num_slice_groups_minus1 = bs_read_ue(b);
 
     if( pps->num_slice_groups_minus1 > 0 )
-    {        
+    {
         pps->slice_group_map_type = bs_read_ue(b);
         if( pps->slice_group_map_type == 0 )
         {
@@ -690,7 +692,7 @@ void read_sei_rbsp(h264_stream_t* h, bs_t* b)
     {
         sei_free(h->seis[i]);
     }
-
+    
     h->num_seis = 0;
     do {
         h->num_seis++;
@@ -706,7 +708,7 @@ int _read_ff_coded_number(bs_t* b)
 {
     int n1 = 0;
     int n2;
-    do
+    do 
     {
         n2 = bs_read_u8(b);
         n1 += n2;
@@ -928,8 +930,8 @@ void read_slice_header(h264_stream_t* h, bs_t* b)
     if( pps->num_slice_groups_minus1 > 0 &&
         pps->slice_group_map_type >= 3 && pps->slice_group_map_type <= 5)
     {
-        sh->slice_group_change_cycle =
-            bs_read_u(b, ceil( log2( pps->pic_size_in_map_units_minus1 +
+        sh->slice_group_change_cycle = 
+            bs_read_u(b, ceil( log2( pps->pic_size_in_map_units_minus1 +  
                                      pps->slice_group_change_rate_minus1 + 1 ) ) ); // was u(v) // FIXME add 2?
     }
     // bs_print_state(b);
