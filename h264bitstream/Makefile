@@ -1,6 +1,6 @@
-VERSION = 0.1.8
+VERSION = 0.1.7
 
-INCLUDES = -I../common
+INCLUDES = 
 LIBS = 
 
 CC = gcc
@@ -29,7 +29,7 @@ libh264bitstream.a: h264_stream.c h264_stream.h h264_sei.c h264_sei.h
 clean:
 	rm -f *.o libh264bitstream.a $(BINARIES)
 
-dox: h264_stream.c h264_stream.h bs.c bs.h Doxyfile
+dox: h264_stream.c h264_stream.h bs.h Doxyfile
 	doxygen Doxyfile
 
 dist: clean
