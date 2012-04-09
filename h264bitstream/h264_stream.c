@@ -21,6 +21,7 @@
  */
 
 #include <stdint.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -240,6 +241,13 @@ int nal_to_rbsp(uint8_t* nal_buf, int nal_size, uint8_t* rbsp_buf, int rbsp_size
             i++;
             count = 0;
         }
+
+        if ( j >= rbsp_size ) 
+        {
+            // error, not enough space
+            return -1;
+        }
+
         rbsp_buf[j] = nal_buf[i];
         if(nal_buf[i] == 0x00)
         {
@@ -349,6 +357,24 @@ int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
     return rbsp_size; // FIXME returns size of rbsp, not nal read
 }
 
+/**
+ Read only the NAL headers (enough to determine unit type) from a byte buffer.
+ @return unit type if read successfully, or -1 if this doesn't look like a nal
+*/
+int peek_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
+{
+    nal_t* nal = h->nal;
+
+    bs_t* b = bs_new(buf, size);
+
+    nal->forbidden_zero_bit = bs_read_f(b,1);
+    nal->nal_ref_idc = bs_read_u(b,2);
+    nal->nal_unit_type = bs_read_u(b,5);
+
+    bs_free(b);
+
+    
+}
 
 //7.3.2.1 Sequence parameter set RBSP syntax
 void read_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
@@ -767,7 +793,7 @@ void read_slice_layer_rbsp(h264_stream_t* h,  bs_t* b)
         uint8_t *sptr = b->p + (!!b->bits_left); // CABAC-specific: skip alignment bits, if there are any
         slice_data->rbsp_size = b->end - sptr;
         
-        slice_data->rbsp_buf = malloc(slice_data->rbsp_size);
+        slice_data->rbsp_buf = (uint8_t*)malloc(slice_data->rbsp_size);
         memcpy( slice_data->rbsp_buf, sptr, slice_data->rbsp_size );
         // ugly hack: since next NALU starts at byte border, we are going to be padded by trailing_bits;
         return;

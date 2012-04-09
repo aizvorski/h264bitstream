@@ -62,7 +62,7 @@ void read_sei_payload(h264_stream_t* h, bs_t* b, int payloadType, int payloadSiz
 {
     sei_t* s = h->sei;
 
-    s->payload = malloc(payloadSize);
+    s->payload = (uint8_t*)malloc(payloadSize);
 
     int i;
 

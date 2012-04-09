@@ -283,7 +283,7 @@ typedef struct
     int forbidden_zero_bit;
     int nal_ref_idc;
     int nal_unit_type;
-    void* parsed;
+    void* parsed; // FIXME
     int sizeof_parsed;
 
     //uint8_t* rbsp_buf;
@@ -429,6 +429,12 @@ void debug_bytes(uint8_t* buf, int len);
 
 void read_sei_payload( h264_stream_t* h, bs_t* b, int payloadType, int payloadSize);
 void write_sei_payload( h264_stream_t* h, bs_t* b, int payloadType, int payloadSize);
+
+//NAL ref idc codes
+#define NAL_REF_IDC_PRIORITY_HIGHEST    3
+#define NAL_REF_IDC_PRIORITY_HIGH       2
+#define NAL_REF_IDC_PRIORITY_LOW        1
+#define NAL_REF_IDC_PRIORITY_DISPOSABLE 0
 
 //Table 7-1 NAL unit type codes
 #define NAL_UNIT_TYPE_UNSPECIFIED                    0    // Unspecified
