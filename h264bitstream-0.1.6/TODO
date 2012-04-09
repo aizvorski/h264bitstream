@@ -1,0 +1,19 @@
+- fix bug: find_nal_unit probably not always correct, especially when end of nal is exactly at the end of available data
+- built-in unit test - read/write known streams
+- built-in unit test - write random data then read back and compare, or vice versa
+- implement reading and writing SEI 
+- implement reading and writing decoded reference picture marking data
+- implement reading and writing reference picture list reordering data
+- implement reading and writing SPS extension
+- add range checking for values which are used to read or write other values
+- add error handling in bs_* functions (particularly end-of-file/buffer)
+- speed up bs_* functions 
+  - handle multiple bits at once
+  - store current several bytes in an int "cache" variable
+  - special case whole bytes which are byte-aligned
+- show as "N/A" or "-" instead of 0 values which are disabled by earlier flags in debug prints
+- debug to string or file handle, not stdout, for more flexibility
+- debug print some values as both hex and decimal (height/width/length - possibly all values?)
+- prefix all functions with h264_ to avoid namespace pollution
+- switch to using nal_unit_type defines instead of constants
+- implement reading and writing slice data (very large project)

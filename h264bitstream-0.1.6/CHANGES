@@ -1,0 +1,36 @@
+0.1.6 - released 2007-06-03
+- initial support for SEI
+- rbsp_to_nal and nal_ro_rbsp conversion functions callable from the outside (also allows using any *_rbsp function directly as long as the appropriate conversion is performed)
+- support for access unit delimiters (AUD)
+- many constants with special meanings now have their own defines, and also print out a description in debug_*
+- correct handling on single slice type-only slices (slice_type >= 5), both for reading and writing
+- full support for files larger than 2GB in h264_analyze
+- output of h264_analyze and debug_* functions uses decimal instead of hex (most cases)
+- fix for cases in which no nal is found in entire buffer in h264_analyze
+- inline many bs_* functions using portable "static inline" syntax
+- slice data read/write (work in progress, not yet functional)
+- fixed writing with emulation_prevention_three_byte again - off-by-one error
+- added defines for rplr and mmco
+
+0.1.5 - released 2006-07-22
+- added readme, changes, todo files
+- added doxygen documentation for public api
+- added h264_new and h264_free functions
+- read_nal_unit detects end of nal correctly
+- read_nal_unit and write_nal_unit now return actual length read/written
+- added defines for nal unit types
+- fixed emulation_prevention_three_byte handling in write_nal_unit
+- fixed bugs in read/write_rbsp_trailing_bits
+
+0.1.4 - released 2005-10-19
+- moved bs.{c,h} into separate files
+- header include more than once is ok
+- changed some notices
+- update manifest and makefile
+- print usage
+- minor fixes
+
+0.1.3 - released 2005-10-12
+- first public release
+- status: implements ALL of H264 standard, except for: SEI (7.3.2.3), slice data partitions (7.3.2.9), slice data, and a few other parts described in the code. Partly implements decoded reference picture marking and reference picture list reordering (data is read but discarded; cannot write). No consistency or range checks.
+
