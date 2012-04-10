@@ -1,9 +1,12 @@
-0.1.7 - in progress as of 2012-01-10
+0.2.0 - in progress as of 2012-04-09
 - added correct handling of multiple pps/sps
+- important bug fixes in nal <-> rbsp translation
+- read/write slice data correctly (as array of bytes only, not parsed)
 - fixed pwt read/write
 - added sei buffering, picture timing read/write
-- bug fixes in nal <-> rbsp translation
-- read/write slice data correctly (as array of bytes only, not parsed)
+- added peek_nal_unit()
+- added avcc read/write
+- converted to autoconf/automake
 
 0.1.6 - released 2007-06-03
 - initial support for SEI
