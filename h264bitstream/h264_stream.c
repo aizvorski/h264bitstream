@@ -21,17 +21,29 @@
  */
 
 #include <stdint.h>
-#include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
 
 #include "bs.h"
 #include "h264_stream.h"
 #include "h264_sei.h"
-
-
-#define log2(x) ( (1/log(2)) * log( (x) ) )
+ 
+/** 
+ Calculate the log base 2 of the argument, rounded up. 
+ Zero or negative arguments return zero 
+ Idea from http://www.southwindsgames.com/blog/2009/01/19/fast-integer-log2-function-in-cc/
+ */
+int intlog2(int x)
+{
+    int log = 0;
+    if (x < 0) { x = 0; }
+    while ((x >> log) > 0)
+    {
+        log++;
+    }
+    if (log > 0 && x == 1<<(log-1)) { log--; }
+    return log;
+}
 
 int is_slice_type(int slice_type, int cmp_type)
 {
@@ -669,7 +681,7 @@ void read_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
             pps->pic_size_in_map_units_minus1 = bs_read_ue(b);
             for( i = 0; i <= pps->pic_size_in_map_units_minus1; i++ )
             {
-                pps->slice_group_id[ i ] = bs_read_u(b, ceil( log2( pps->num_slice_groups_minus1 + 1 ) ) ); // was u(v)
+                pps->slice_group_id[ i ] = bs_read_u(b, intlog2( pps->num_slice_groups_minus1 + 1 ) ); // was u(v)
             }
         }
     }
@@ -963,8 +975,8 @@ void read_slice_header(h264_stream_t* h, bs_t* b)
         pps->slice_group_map_type >= 3 && pps->slice_group_map_type <= 5)
     {
         sh->slice_group_change_cycle = 
-            bs_read_u(b, ceil( log2( pps->pic_size_in_map_units_minus1 +  
-                                     pps->slice_group_change_rate_minus1 + 1 ) ) ); // was u(v) // FIXME add 2?
+            bs_read_u(b, intlog2( pps->pic_size_in_map_units_minus1 +  
+                                  pps->slice_group_change_rate_minus1 + 1 ) ); // was u(v) // FIXME add 2?
     }
     // bs_print_state(b);
 }
@@ -1551,7 +1563,7 @@ void write_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
             bs_write_ue(b, pps->pic_size_in_map_units_minus1);
             for( i = 0; i <= pps->pic_size_in_map_units_minus1; i++ )
             {
-                bs_write_u(b, ceil( log2( pps->num_slice_groups_minus1 + 1 ) ), pps->slice_group_id[ i ] ); // was u(v)
+                bs_write_u(b, intlog2( pps->num_slice_groups_minus1 + 1 ), pps->slice_group_id[ i ] ); // was u(v)
             }
         }
     }
@@ -1848,8 +1860,8 @@ void write_slice_header(h264_stream_t* h, bs_t* b)
     if( pps->num_slice_groups_minus1 > 0 &&
         pps->slice_group_map_type >= 3 && pps->slice_group_map_type <= 5)
     {
-        bs_write_u(b, ceil( log2( pps->pic_size_in_map_units_minus1 +
-                                  pps->slice_group_change_rate_minus1 + 1 ) ),
+        bs_write_u(b, intlog2( pps->pic_size_in_map_units_minus1 +
+                               pps->slice_group_change_rate_minus1 + 1 ),
                    sh->slice_group_change_cycle ); // was u(v) // FIXME add 2?
     }
     //bs_print_state(b);
