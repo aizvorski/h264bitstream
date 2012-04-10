@@ -23,23 +23,11 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#if !defined(MINGW)
-#include <inttypes.h>
-#else
-#define PRId64 "lld"
-#define PRIX64 "llX"
-#endif
-#include <unistd.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 
-#if !defined(MINGW)
-#define O_BINARY 0
-#endif
-
-#define BUFSIZE 8*1024*1024
+#define BUFSIZE 32*1024*1024
 
 
 
@@ -56,29 +44,34 @@ int main(int argc, char *argv[])
         printf("where stream.h264 is a raw H264 stream, as produced by JM or x264\n");
     }
 
-    int fd = open(argv[1], O_RDONLY | O_BINARY);
-    if (fd == -1) { printf("!! Error: could not open file: %s \n", strerror(errno)); exit(0); }
+    FILE* infile = fopen(argv[1], "rb");
+    if (infile == NULL) { printf("!! Error: could not open file: %s \n", strerror(errno)); exit(0); }
 
-    int rsz = 0;
-    int sz = 0;
+    size_t rsz = 0;
+    size_t sz = 0;
     int64_t off = 0;
     uint8_t* p = buf;
 
     int nal_start, nal_end;
 
-    while ((rsz = read(fd, buf + sz, BUFSIZE - sz)))
+    while (1)
     {
-        if (rsz < 0) { printf("!! Error: read failed: %s \n", strerror(errno)); break; }
+        rsz = fread(buf + sz, 1, BUFSIZE - sz, infile);
+        if (rsz == 0)
+        {
+            if (ferror(infile)) { printf("!! Error: read failed: %s \n", strerror(errno)); break; }
+            break;  // if (feof(infile)) 
+        }
 
         sz += rsz;
 
         while (find_nal_unit(p, sz, &nal_start, &nal_end) > 0)
         {
-            printf("!! Found NAL at offset %"PRId64" (0x%04"PRIX64"), size %"PRId64" (0x%04"PRIX64") \n", 
-                   (int64_t)(off + (p - buf) + nal_start), 
-                   (int64_t)(off + (p - buf) + nal_start), 
-                   (int64_t)(nal_end - nal_start), 
-                   (int64_t)(nal_end - nal_start) );
+            printf("!! Found NAL at offset %lld (0x%04llX), size %lld (0x%04llX) \n", 
+                   (long long int)(off + (p - buf) + nal_start), 
+                   (long long int)(off + (p - buf) + nal_start), 
+                   (long long int)(nal_end - nal_start), 
+                   (long long int)(nal_end - nal_start) );
 
             p += nal_start;
             read_nal_unit(h, p, nal_end - nal_start);
@@ -94,11 +87,11 @@ int main(int argc, char *argv[])
         // if no NALs found in buffer, discard it
         if (p == buf) 
         {
-            printf("!! Did not find any NALs between offset %"PRId64" (0x%04"PRIX64"), size %"PRId64" (0x%04"PRIX64"), discarding \n", 
-                   (int64_t)off, 
-                   (int64_t)off, 
-                   (int64_t)off + sz, 
-                   (int64_t)off + sz);
+            printf("!! Did not find any NALs between offset %lld (0x%04llX), size %lld (0x%04llX), discarding \n", 
+                   (long long int)off, 
+                   (long long int)off, 
+                   (long long int)off + sz, 
+                   (long long int)off + sz);
 
             p = buf + sz;
             sz = 0;
@@ -111,6 +104,8 @@ int main(int argc, char *argv[])
 
     h264_free(h);
     free(buf);
+
+    fclose(infile);
 
     return 0;
 }
