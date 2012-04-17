@@ -173,22 +173,22 @@ int more_rbsp_data(h264_stream_t* h, bs_t* b)
    If that is not true, output may be truncated and an error will be returned.
    If that is true, there is no possible error during this conversion.
    @param[in] rbsp_buf   the rbsp data
-   @param[in] rbsp_size  the size of the rbsp data
-   @param[in,out] nal_buf   allocated memory for the nal data
-   @param[in] nal_size      size of the allocated memory for the nal data
+   @param[in] rbsp_size  pointer to the size of the rbsp data
+   @param[in,out] nal_buf   allocated memory in which to put the nal data
+   @param[in,out] nal_size  as input, pointer to the maximum size of the nal data; as output, filled in with the actual size of the nal data
    @return  actual size of nal data, or -1 on error
  */
 // 7.3.1 NAL unit syntax
 // 7.4.1.1 Encapsulation of an SODB within an RBSP
-int rbsp_to_nal(const uint8_t* rbsp_buf, int rbsp_size, uint8_t* nal_buf, int nal_size)
+int rbsp_to_nal(const uint8_t* rbsp_buf, const int* rbsp_size, uint8_t* nal_buf, int* nal_size)
 {
     int i;
     int j     = 0;
     int count = 0;
 
-    for ( i = 0; i < rbsp_size ; i++ )
+    for ( i = 0; i < *rbsp_size ; i++ )
     {
-        if ( j >= nal_size ) 
+        if ( j >= *nal_size ) 
         {
             // error, not enough space
             return -1;
@@ -211,28 +211,31 @@ int rbsp_to_nal(const uint8_t* rbsp_buf, int rbsp_size, uint8_t* nal_buf, int na
         }
         j++;
     }
+
+    *nal_size = j;
     return j;
 }
+
 /**
    Convert NAL data (Annex B format) to RBSP data.
    The size of rbsp_buf must be the same as size of the nal_buf to guarantee the output will fit.
    If that is not true, output may be truncated and an error will be returned. 
    Additionally, certain byte sequences in the input nal_buf are not allowed in the spec and also cause the conversion to fail and an error to be returned.
    @param[in] nal_buf   the nal data
-   @param[in] nal_size  pointer to the size of the nal data
-   @param[in,out] rbsp_buf   allocated memory for the rbsp data
-   @param[in] rbsp_size  size of the allocated memory for the rbsp data
+   @param[in,out] nal_size  as input, pointer to the size of the nal data; as output, filled in with the actual size of the nal data
+   @param[in,out] rbsp_buf   allocated memory in which to put the rbsp data
+   @param[in,out] rbsp_size  as input, pointer to the maximum size of the rbsp data; as output, filled in with the actual size of rbsp data
    @return  actual size of rbsp data, or -1 on error
  */
 // 7.3.1 NAL unit syntax
 // 7.4.1.1 Encapsulation of an SODB within an RBSP
-int nal_to_rbsp(uint8_t* nal_buf, int nal_size, uint8_t* rbsp_buf, int rbsp_size)
+int nal_to_rbsp(const uint8_t* nal_buf, int* nal_size, uint8_t* rbsp_buf, int* rbsp_size)
 {
     int i;
     int j     = 0;
     int count = 0;
   
-    for( i = 0; i < nal_size; i++ )
+    for( i = 0; i < *nal_size; i++ )
     { 
         // in NAL unit, 0x000000, 0x000001 or 0x000002 shall not occur at any byte-aligned position
         if( ( count == 2 ) && ( nal_buf[i] < 0x03) ) 
@@ -243,13 +246,13 @@ int nal_to_rbsp(uint8_t* nal_buf, int nal_size, uint8_t* rbsp_buf, int rbsp_size
         if( ( count == 2 ) && ( nal_buf[i] == 0x03) )
         {
             // check the 4th byte after 0x000003, except when cabac_zero_word is used, in which case the last three bytes of this NAL unit must be 0x000003
-            if((i < nal_size - 1) && (nal_buf[i+1] > 0x03))
+            if((i < *nal_size - 1) && (nal_buf[i+1] > 0x03))
             {
                 return -1;
             }
 
             // if cabac_zero_word is used, the final byte of this NAL unit(0x03) is discarded, and the last two bytes of RBSP must be 0x0000
-            if(i == nal_size - 1)
+            if(i == *nal_size - 1)
             {
                 return j;
             }
@@ -258,7 +261,7 @@ int nal_to_rbsp(uint8_t* nal_buf, int nal_size, uint8_t* rbsp_buf, int rbsp_size
             count = 0;
         }
 
-        if ( j >= rbsp_size ) 
+        if ( j >= *rbsp_size ) 
         {
             // error, not enough space
             return -1;
@@ -276,6 +279,8 @@ int nal_to_rbsp(uint8_t* nal_buf, int nal_size, uint8_t* rbsp_buf, int rbsp_size
         j++;
     }
 
+    *nal_size = i;
+    *rbsp_size = j;
     return j;
 }
 
@@ -286,7 +291,7 @@ int nal_to_rbsp(uint8_t* nal_buf, int nal_size, uint8_t* rbsp_buf, int rbsp_size
  @param[in,out] h          the stream object
  @param[in]     buf        the buffer
  @param[in]     size       the size of the buffer
- @return                   the length of data actually read
+ @return                   the length of data actually read, or -1 on error
  */
 //7.3.1 NAL unit syntax
 int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
@@ -303,11 +308,14 @@ int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
 
     bs_free(b);
 
+    int nal_size = size;
     int rbsp_size = size;
     uint8_t* rbsp_buf = (uint8_t*)malloc(rbsp_size);
+ 
+    // FIXME should this be buf+1, nal_size-1 ?
+    int rc = nal_to_rbsp(buf, &nal_size, rbsp_buf, &rbsp_size);
 
-    rbsp_size = nal_to_rbsp(buf + 1, size - 1, rbsp_buf, rbsp_size);
-    if (rbsp_size < 0) { free(rbsp_buf); return -1; } // handle conversion error
+    if (rc < 0) { free(rbsp_buf); return -1; } // handle conversion error
 
     b = bs_new(rbsp_buf, rbsp_size);
 
@@ -370,7 +378,7 @@ int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
     bs_free(b); 
     free(rbsp_buf);
 
-    return rbsp_size; // FIXME returns size of rbsp, not nal read
+    return nal_size;
 }
 
 /**
