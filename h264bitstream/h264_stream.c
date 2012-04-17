@@ -256,7 +256,7 @@ int nal_to_rbsp(const uint8_t* nal_buf, int* nal_size, uint8_t* rbsp_buf, int* r
             // if cabac_zero_word is used, the final byte of this NAL unit(0x03) is discarded, and the last two bytes of RBSP must be 0x0000
             if(i == *nal_size - 1)
             {
-                return j;
+                break;
             }
 
             i++;
