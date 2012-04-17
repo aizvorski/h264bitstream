@@ -1,4 +1,4 @@
-AC_INIT(h264bitstream, 2.0.0, aizvorski@gmail.com)
+AC_INIT(h264bitstream, 0.2.0, aizvorski@gmail.com)
 
 AC_CONFIG_SRCDIR(./h264_stream.c)
 
