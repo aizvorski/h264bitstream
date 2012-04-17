@@ -371,6 +371,7 @@ int rbsp_to_nal(const uint8_t* rbsp_buf, int rbsp_size, uint8_t* nal_buf, int na
 int nal_to_rbsp(uint8_t* nal_buf, int nal_size, uint8_t* rbsp_buf, int rbsp_size);
 
 int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size);
+int peek_nal_unit(h264_stream_t* h, uint8_t* buf, int size);
 
 void read_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b);
 void read_scaling_list(bs_t* b, int* scalingList, int sizeOfScalingList, int useDefaultScalingMatrixFlag );

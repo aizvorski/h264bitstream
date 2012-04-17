@@ -385,7 +385,31 @@ int peek_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
 
     bs_free(b);
 
-    
+    // basic verification, per 7.4.1
+    if ( nal->forbidden_zero_bit ) { return -1; }
+    if ( nal->nal_unit_type <= 0 || nal->nal_unit_type > 20 ) { return -1; }
+    if ( nal->nal_unit_type > 15 && nal->nal_unit_type < 19 ) { return -1; }
+
+    if ( nal->nal_ref_idc == 0 )
+    {
+        if ( nal->nal_unit_type == NAL_UNIT_TYPE_CODED_SLICE_IDR )
+        {
+            return -1;
+        }
+    }
+    else 
+    {
+        if ( nal->nal_unit_type ==  NAL_UNIT_TYPE_SEI || 
+             nal->nal_unit_type == NAL_UNIT_TYPE_AUD || 
+             nal->nal_unit_type == NAL_UNIT_TYPE_END_OF_SEQUENCE || 
+             nal->nal_unit_type == NAL_UNIT_TYPE_END_OF_STREAM || 
+             nal->nal_unit_type == NAL_UNIT_TYPE_FILLER ) 
+        {
+            return -1;
+        }
+    }
+
+    return nal->nal_unit_type;
 }
 
 //7.3.2.1 Sequence parameter set RBSP syntax
