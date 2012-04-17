@@ -27,9 +27,10 @@
 #include <string.h>
 #include <errno.h>
 
-#include <getopt.h>
-
 #define BUFSIZE 32*1024*1024
+
+#ifdef HAVE_GETOPT_LONG
+#include <getopt.h>
 
 static struct option long_options[] =
 {
@@ -38,6 +39,7 @@ static struct option long_options[] =
     { "help",    no_argument,       NULL, 'h'},
     { "verbose", required_argument, NULL, 'v'},
 };
+#endif
 
 static char options[] =
 "\t-o output file, defaults to test.264\n"
@@ -57,6 +59,8 @@ void usage( )
 
 int main(int argc, char *argv[])
 {
+    FILE* infile;
+
     uint8_t* buf = (uint8_t*)malloc( BUFSIZE );
 
     h264_stream_t* h = h264_new();
@@ -66,6 +70,7 @@ int main(int argc, char *argv[])
     int opt_verbose = 1;
     int opt_probe = 0;
 
+#ifdef HAVE_GETOPT_LONG
     int c;
     int long_options_index;
     extern char* optarg;
@@ -92,10 +97,18 @@ int main(int argc, char *argv[])
         }
     }
 
+    infile = fopen(argv[optind], "rb");
+
+#elif
+
+    infile = fopen(argv[1], "rb");
+
+#endif
+
+    if (infile == NULL) { fprintf( stderr, "!! Error: could not open file: %s \n", strerror(errno)); exit(EXIT_FAILURE); }
+
     if (h264_dbgfile == NULL) { h264_dbgfile = stdout; }
     
-    FILE* infile = fopen(argv[optind], "rb");
-    if (infile == NULL) { fprintf( stderr, "!! Error: could not open file: %s \n", strerror(errno)); exit(EXIT_FAILURE); }
 
     size_t rsz = 0;
     size_t sz = 0;

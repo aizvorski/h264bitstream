@@ -27,6 +27,8 @@ AC_PROG_LD
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 
+AC_CHECK_FUNCS(getopt_long, , AC_MSG_WARN(getopt_long not found. Long options will not work.) )
+
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_MACRO_DIR([m4])
 
