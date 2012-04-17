@@ -183,7 +183,7 @@ int more_rbsp_data(h264_stream_t* h, bs_t* b)
 int rbsp_to_nal(const uint8_t* rbsp_buf, const int* rbsp_size, uint8_t* nal_buf, int* nal_size)
 {
     int i;
-    int j     = 0;
+    int j     = 1;
     int count = 0;
 
     for ( i = 0; i < *rbsp_size ; i++ )
@@ -235,7 +235,7 @@ int nal_to_rbsp(const uint8_t* nal_buf, int* nal_size, uint8_t* rbsp_buf, int* r
     int j     = 0;
     int count = 0;
   
-    for( i = 0; i < *nal_size; i++ )
+    for( i = 1; i < *nal_size; i++ )
     { 
         // in NAL unit, 0x000000, 0x000001 or 0x000002 shall not occur at any byte-aligned position
         if( ( count == 2 ) && ( nal_buf[i] < 0x03) ) 
@@ -1314,8 +1314,8 @@ int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
     // now get the actual size used
     rbsp_size = bs_pos(b);
 
-    nal_size = rbsp_to_nal(rbsp_buf, rbsp_size, buf + 1, nal_size - 1) + 1;
-    if (nal_size < 0) { bs_free(b); free(rbsp_buf); return -1; }
+    int rc = rbsp_to_nal(rbsp_buf, &rbsp_size, buf, &nal_size);
+    if (rc < 0) { bs_free(b); free(rbsp_buf); return -1; }
 
     bs_free(b);
     free(rbsp_buf);
