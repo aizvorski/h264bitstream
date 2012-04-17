@@ -186,7 +186,7 @@ int rbsp_to_nal(const uint8_t* rbsp_buf, const int* rbsp_size, uint8_t* nal_buf,
     int j     = 1;
     int count = 0;
 
-    // FIXME should zero out nal_buf[0]
+    if (*nal_size > 0) { nal_buf[0] = 0x00; } // zero out first byte since we start writing from second byte
 
     for ( i = 0; i < *rbsp_size ; i++ )
     {
