@@ -24,6 +24,7 @@
 #define _H264_STREAM_H        1
 
 #include <stdint.h>
+#include <stdio.h>
 #include <assert.h>
 
 #include "bs.h"
@@ -521,6 +522,9 @@ void write_sei_payload( h264_stream_t* h, bs_t* b, int payloadType, int payloadS
 #define H264_PROFILE_MAIN      77
 #define H264_PROFILE_EXTENDED  88
 #define H264_PROFILE_HIGH     100
+
+// file handle for debug output
+extern FILE* h264_dbgfile;
 
 #ifdef __cplusplus
 }

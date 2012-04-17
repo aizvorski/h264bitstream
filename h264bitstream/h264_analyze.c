@@ -65,7 +65,6 @@ int main(int argc, char *argv[])
 
     int opt_verbose = 1;
     int opt_probe = 0;
-    FILE* dbgfile = NULL;
 
     int c;
     int long_options_index;
@@ -77,7 +76,7 @@ int main(int argc, char *argv[])
         switch ( c )
         {
             case 'o':
-                if (dbgfile == NULL) { dbgfile = fopen( optarg, "wt"); }
+                if (h264_dbgfile == NULL) { h264_dbgfile = fopen( optarg, "wt"); }
                 break;
             case 'p':
                 opt_probe = 1;
@@ -93,8 +92,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (dbgfile == NULL) { dbgfile = stdout; }
-
+    if (h264_dbgfile == NULL) { h264_dbgfile = stdout; }
+    
     FILE* infile = fopen(argv[optind], "rb");
     if (infile == NULL) { fprintf( stderr, "!! Error: could not open file: %s \n", strerror(errno)); exit(EXIT_FAILURE); }
 
@@ -120,7 +119,7 @@ int main(int argc, char *argv[])
         {
             if ( opt_verbose > 0 )
             {
-               fprintf( dbgfile, "!! Found NAL at offset %lld (0x%04llX), size %lld (0x%04llX) \n",
+               fprintf( h264_dbgfile, "!! Found NAL at offset %lld (0x%04llX), size %lld (0x%04llX) \n",
                       (long long int)(off + (p - buf) + nal_start),
                       (long long int)(off + (p - buf) + nal_start),
                       (long long int)(nal_end - nal_start),
@@ -140,7 +139,7 @@ int main(int argc, char *argv[])
                 constraint_byte = h->sps->constraint_set4_flag << 3;
                 constraint_byte = h->sps->constraint_set4_flag << 3;
 
-                fprintf( dbgfile, "codec: avc1.%02X%02X%02X\n",h->sps->profile_idc, constraint_byte, h->sps->level_idc );
+                fprintf( h264_dbgfile, "codec: avc1.%02X%02X%02X\n",h->sps->profile_idc, constraint_byte, h->sps->level_idc );
 
                 // TODO: add more, move to h264_stream (?)
                 break; // we've seen enough, bailing out.
@@ -148,7 +147,7 @@ int main(int argc, char *argv[])
 
             if ( opt_verbose > 0 )
             {
-                fprintf( dbgfile, "XX ");
+                fprintf( h264_dbgfile, "XX ");
                 debug_bytes(p-4, nal_end - nal_start + 4 >= 16 ? 16: nal_end - nal_start + 4);
 
                 debug_nal(h, h->nal);
@@ -178,9 +177,8 @@ int main(int argc, char *argv[])
 
     h264_free(h);
     free(buf);
-    free(strbuf);
 
-    fclose(dbgfile);
+    fclose(h264_dbgfile);
     fclose(infile);
 
     return 0;
