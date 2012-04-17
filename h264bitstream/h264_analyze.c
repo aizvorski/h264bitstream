@@ -27,25 +27,76 @@
 #include <string.h>
 #include <errno.h>
 
+#include <getopt.h>
+
 #define BUFSIZE 32*1024*1024
 
+static struct option long_options[] =
+{
+    { "probe",   no_argument, NULL, 'p'},
+    { "output",  required_argument, NULL, 'o'},
+    { "help",    no_argument,       NULL, 'h'},
+    { "verbose", required_argument, NULL, 'v'},
+};
 
+static char options[] =
+"\t-o output file, defaults to test.264\n"
+"\t-p print information regarding this stream\n"
+"\t-v print more info\n"
+"\t-h print this message and exit\n";
+
+void usage( )
+{
+
+    fprintf( stderr, "h264_analyze, version 0.1.7\n");
+    fprintf( stderr, "Analyze H.264 bitstreams in Annex B format\n");
+    fprintf( stderr, "Usage: \n");
+
+    fprintf( stderr, "h264_analyze [options] <input bitstream>\noptions:\n%s\n", options);
+}
 
 int main(int argc, char *argv[])
 {
-    uint8_t* buf = (uint8_t*)malloc(BUFSIZE);
+    uint8_t* buf = (uint8_t*)malloc( BUFSIZE );
+
     h264_stream_t* h = h264_new();
 
-    if (argc < 2)
+    if (argc < 2) { usage(); return EXIT_FAILURE; }
+
+    int opt_verbose = 1;
+    int opt_probe = 0;
+    FILE* dbgfile = NULL;
+
+    int c;
+    int long_options_index;
+    extern char* optarg;
+    extern int   optind;
+
+    while ( ( c = getopt_long( argc, argv, "o:p:hv", long_options, &long_options_index) ) != -1 )
     {
-        printf("h264_analyze, version 0.1.7\n");
-        printf("Usage: \n");
-        printf("  h264_analyze stream.h264\n");
-        printf("where stream.h264 is a raw H264 stream, as produced by JM or x264\n");
+        switch ( c )
+        {
+            case 'o':
+                if (dbgfile == NULL) { dbgfile = fopen( optarg, "wt"); }
+                break;
+            case 'p':
+                opt_probe = 1;
+                opt_verbose = 0;
+                break;
+            case 'v':
+                opt_verbose = atoi( optarg );
+                break;
+            case 'h':
+            default:
+                usage( );
+                return 1;
+        }
     }
 
-    FILE* infile = fopen(argv[1], "rb");
-    if (infile == NULL) { printf("!! Error: could not open file: %s \n", strerror(errno)); exit(0); }
+    if (dbgfile == NULL) { dbgfile = stdout; }
+
+    FILE* infile = fopen(argv[optind], "rb");
+    if (infile == NULL) { fprintf( stderr, "!! Error: could not open file: %s \n", strerror(errno)); exit(EXIT_FAILURE); }
 
     size_t rsz = 0;
     size_t sz = 0;
@@ -59,7 +110,7 @@ int main(int argc, char *argv[])
         rsz = fread(buf + sz, 1, BUFSIZE - sz, infile);
         if (rsz == 0)
         {
-            if (ferror(infile)) { printf("!! Error: read failed: %s \n", strerror(errno)); break; }
+            if (ferror(infile)) { fprintf( stderr, "!! Error: read failed: %s \n", strerror(errno)); break; }
             break;  // if (feof(infile)) 
         }
 
@@ -67,19 +118,42 @@ int main(int argc, char *argv[])
 
         while (find_nal_unit(p, sz, &nal_start, &nal_end) > 0)
         {
-            printf("!! Found NAL at offset %lld (0x%04llX), size %lld (0x%04llX) \n", 
-                   (long long int)(off + (p - buf) + nal_start), 
-                   (long long int)(off + (p - buf) + nal_start), 
-                   (long long int)(nal_end - nal_start), 
-                   (long long int)(nal_end - nal_start) );
+            if ( opt_verbose > 0 )
+            {
+               fprintf( dbgfile, "!! Found NAL at offset %lld (0x%04llX), size %lld (0x%04llX) \n",
+                      (long long int)(off + (p - buf) + nal_start),
+                      (long long int)(off + (p - buf) + nal_start),
+                      (long long int)(nal_end - nal_start),
+                      (long long int)(nal_end - nal_start) );
+            }
 
             p += nal_start;
             read_nal_unit(h, p, nal_end - nal_start);
 
-            printf("XX ");
-            debug_bytes(p-4, nal_end - nal_start + 4 >= 16 ? 16: nal_end - nal_start + 4);
+            if ( opt_probe && h->nal->nal_unit_type == NAL_UNIT_TYPE_SPS )
+            {
+                // print codec parameter, per RFC 6381.
+                int constraint_byte = h->sps->constraint_set0_flag << 7;
+                constraint_byte = h->sps->constraint_set1_flag << 6;
+                constraint_byte = h->sps->constraint_set2_flag << 5;
+                constraint_byte = h->sps->constraint_set3_flag << 4;
+                constraint_byte = h->sps->constraint_set4_flag << 3;
+                constraint_byte = h->sps->constraint_set4_flag << 3;
 
-            debug_nal(h, h->nal);
+                fprintf( dbgfile, "codec: avc1.%02X%02X%02X\n",h->sps->profile_idc, constraint_byte, h->sps->level_idc );
+
+                // TODO: add more, move to h264_stream (?)
+                break; // we've seen enough, bailing out.
+            }
+
+            if ( opt_verbose > 0 )
+            {
+                fprintf( dbgfile, "XX ");
+                debug_bytes(p-4, nal_end - nal_start + 4 >= 16 ? 16: nal_end - nal_start + 4);
+
+                debug_nal(h, h->nal);
+            }
+
             p += (nal_end - nal_start);
             sz -= nal_end;
         }
@@ -87,7 +161,7 @@ int main(int argc, char *argv[])
         // if no NALs found in buffer, discard it
         if (p == buf) 
         {
-            printf("!! Did not find any NALs between offset %lld (0x%04llX), size %lld (0x%04llX), discarding \n", 
+            fprintf( stderr, "!! Did not find any NALs between offset %lld (0x%04llX), size %lld (0x%04llX), discarding \n",
                    (long long int)off, 
                    (long long int)off, 
                    (long long int)off + sz, 
@@ -104,7 +178,9 @@ int main(int argc, char *argv[])
 
     h264_free(h);
     free(buf);
+    free(strbuf);
 
+    fclose(dbgfile);
     fclose(infile);
 
     return 0;
