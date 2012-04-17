@@ -1,7 +1,7 @@
 /* 
  * h264bitstream - a library for reading and writing H.264 video
  * Copyright (C) 2005-2007 Auroras Entertainment, LLC
- * Copyright (C) 2008-2012 Avail-TVN
+ * Copyright (C) 2008-2011 Avail-TVN
  * 
  * Written by Alex Izvorski <aizvorski@gmail.com> and Alex Giladi <alex.giladi@gmail.com>
  * 
