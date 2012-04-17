@@ -186,6 +186,8 @@ int rbsp_to_nal(const uint8_t* rbsp_buf, const int* rbsp_size, uint8_t* nal_buf,
     int j     = 1;
     int count = 0;
 
+    // FIXME should zero out nal_buf[0]
+
     for ( i = 0; i < *rbsp_size ; i++ )
     {
         if ( j >= *nal_size ) 
@@ -312,7 +314,6 @@ int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
     int rbsp_size = size;
     uint8_t* rbsp_buf = (uint8_t*)malloc(rbsp_size);
  
-    // FIXME should this be buf+1, nal_size-1 ?
     int rc = nal_to_rbsp(buf, &nal_size, rbsp_buf, &rbsp_size);
 
     if (rc < 0) { free(rbsp_buf); return -1; } // handle conversion error
