@@ -424,7 +424,9 @@ void read_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
     int constraint_set1_flag = bs_read_u1(b);
     int constraint_set2_flag = bs_read_u1(b);
     int constraint_set3_flag = bs_read_u1(b);
-    int reserved_zero_4bits  = bs_read_u(b,4);  /* all 0's */
+    int constraint_set4_flag = bs_read_u1(b);
+    int constraint_set5_flag = bs_read_u1(b);
+    int reserved_zero_2bits  = bs_read_u(b,2);  /* all 0's */
     int level_idc = bs_read_u8(b);
     int seq_parameter_set_id = bs_read_ue(b);
 
@@ -440,7 +442,9 @@ void read_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
     sps->constraint_set1_flag = constraint_set1_flag;//bs_read_u1(b);
     sps->constraint_set2_flag = constraint_set2_flag;//bs_read_u1(b);
     sps->constraint_set3_flag = constraint_set3_flag;//bs_read_u1(b);
-    sps->reserved_zero_4bits = reserved_zero_4bits;//bs_read_u(b,4);  /* all 0's */
+    sps->constraint_set4_flag = constraint_set4_flag;//bs_read_u1(b);
+    sps->constraint_set5_flag = constraint_set5_flag;//bs_read_u1(b);
+    sps->reserved_zero_2bits = reserved_zero_2bits;//bs_read_u(b,2);
     sps->level_idc = level_idc; //bs_read_u8(b);
     sps->seq_parameter_set_id = seq_parameter_set_id; // bs_read_ue(b);
     if( sps->profile_idc == 100 || sps->profile_idc == 110 ||
@@ -1320,7 +1324,9 @@ void write_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
     bs_write_u1(b, sps->constraint_set1_flag);
     bs_write_u1(b, sps->constraint_set2_flag);
     bs_write_u1(b, sps->constraint_set3_flag);
-    bs_write_u(b,4, sps->reserved_zero_4bits);  /* all 0's */
+    bs_write_u1(b, sps->constraint_set4_flag);
+    bs_write_u1(b, sps->constraint_set5_flag);
+    bs_write_u(b,2, 0);  /* reserved_zero_2bits */
     bs_write_u8(b, sps->level_idc);
     bs_write_ue(b, sps->seq_parameter_set_id);
     if( sps->profile_idc == 100 || sps->profile_idc == 110 ||
@@ -2103,7 +2109,9 @@ void debug_sps(sps_t* sps)
     printf(" constraint_set1_flag : %d \n", sps->constraint_set1_flag );
     printf(" constraint_set2_flag : %d \n", sps->constraint_set2_flag );
     printf(" constraint_set3_flag : %d \n", sps->constraint_set3_flag );
-    printf(" reserved_zero_4bits : %d \n", sps->reserved_zero_4bits );
+    printf(" constraint_set4_flag : %d \n", sps->constraint_set4_flag );
+    printf(" constraint_set5_flag : %d \n", sps->constraint_set5_flag );
+    printf(" reserved_zero_2bits : %d \n", sps->reserved_zero_2bits );
     printf(" level_idc : %d \n", sps->level_idc );
     printf(" seq_parameter_set_id : %d \n", sps->seq_parameter_set_id );
     printf(" chroma_format_idc : %d \n", sps->chroma_format_idc );

@@ -47,7 +47,9 @@ typedef struct
     int constraint_set1_flag;
     int constraint_set2_flag;
     int constraint_set3_flag;
-    int reserved_zero_4bits;
+    int constraint_set4_flag;
+    int constraint_set5_flag;
+    int reserved_zero_2bits;
     int level_idc;
     int seq_parameter_set_id;
     int chroma_format_idc;
