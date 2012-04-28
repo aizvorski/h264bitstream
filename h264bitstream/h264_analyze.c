@@ -29,8 +29,11 @@
 
 #define BUFSIZE 32*1024*1024
 
-#ifdef HAVE_GETOPT_LONG
+#if (defined(__GNUC__))
+#define HAVE_GETOPT_LONG
+
 #include <getopt.h>
+
 
 static struct option long_options[] =
 {
@@ -99,7 +102,7 @@ int main(int argc, char *argv[])
 
     infile = fopen(argv[optind], "rb");
 
-#elif
+#else
 
     infile = fopen(argv[1], "rb");
 
