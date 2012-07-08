@@ -173,7 +173,7 @@ void structure(seq_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
 
     if( is_reading )
     {
-        memcpy(sps, h->sps_table[sps->seq_parameter_set_id], sizeof(sps_t));
+        memcpy(h->sps, h->sps_table[sps->seq_parameter_set_id], sizeof(sps_t));
     }
 }
 
@@ -407,7 +407,7 @@ void structure(pic_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
 
     if( is_reading )
     {
-        memcpy(pps, h->pps_table[pps->pic_parameter_set_id], sizeof(pps_t));
+        memcpy(h->pps, h->pps_table[pps->pic_parameter_set_id], sizeof(pps_t));
     }
 }
 
@@ -571,8 +571,10 @@ void structure(slice_header)(h264_stream_t* h, bs_t* b)
     value( sh->pic_parameter_set_id, ue );
 
     // TODO check existence, otherwise fail
-    pps_t* pps = h->pps = h->pps_table[sh->pic_parameter_set_id];
-    sps_t* sps = h->sps = h->sps_table[pps->seq_parameter_set_id];
+    pps_t* pps = h->pps;
+    sps_t* sps = h->sps;
+    memcpy(h->pps_table[sh->pic_parameter_set_id], h->pps, sizeof(pps_t));
+    memcpy(h->sps_table[pps->seq_parameter_set_id], h->sps, sizeof(sps_t));
 
     value( sh->frame_num, u(sps->log2_max_frame_num_minus4 + 4 ) ); // was u(v)
     if( !sps->frame_mbs_only_flag )
