@@ -43,7 +43,7 @@ void structure(slice_data)( h264_stream_t* h, bs_t* b )
     do
     {
         int mb_skip_flag;
-    int mb_skip_run;
+        int mb_skip_run;
         if( h->sh->slice_type != SH_SLICE_TYPE_I && h->sh->slice_type != SH_SLICE_TYPE_SI )
         {
             if( !h->pps->entropy_coding_mode_flag )
@@ -87,7 +87,7 @@ void structure(slice_data)( h264_stream_t* h, bs_t* b )
             }
             else
             {
-            int end_of_slice_flag;
+                int end_of_slice_flag;
                 value( end_of_slice_flag, ae );
                 moreDataFlag = !end_of_slice_flag;
             }

@@ -8,6 +8,11 @@ while ($code =~ m{\n(void structure.*)}mg)
     $decl .= $1 . ";\n";
 }
 
+$code =~ s{(.*)#function_declarations}{#function_declarations}s;
+$preamble = $1;
+
+print $preamble;
+
 $code =~ s{#function_declarations}{$decl};
 
 $code_read = $code;
