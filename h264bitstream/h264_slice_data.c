@@ -92,7 +92,7 @@ void bs_write_ce(bs_t* b, uint32_t v);
 
 
 //7.3.4 Slice data syntax
-void read_slice_data( h264_stream_t* h, bs_t* b )
+void structure(slice_data)( h264_stream_t* h, bs_t* b )
 {
     if( h->pps->entropy_coding_mode_flag )
     {
@@ -132,7 +132,7 @@ void read_slice_data( h264_stream_t* h, bs_t* b )
                 if( !cabac ) { mb->mb_field_decoding_flag = bs_read_u(b, 1); }
                 else         { mb->mb_field_decoding_flag = bs_read_ae(b); }
             }
-            read_macroblock_layer( h, b );
+            structure(macroblock_layer)( h, b );
         }
         if( !h->pps->entropy_coding_mode_flag )
         {
@@ -160,7 +160,7 @@ void read_slice_data( h264_stream_t* h, bs_t* b )
 
 
 //7.3.5 Macroblock layer syntax
-void read_macroblock_layer( h264_stream_t* h, bs_t* b )
+void structure(macroblock_layer)( h264_stream_t* h, bs_t* b )
 {
     if( !cabac ) { mb->mb_type = bs_read_ue(b); }
     else         { mb->mb_type = bs_read_ae(b); }
@@ -186,7 +186,7 @@ void read_macroblock_layer( h264_stream_t* h, bs_t* b )
             MbPartPredMode( mb_type, 0 ) != Intra_16x16 &&
             NumMbPart( mb_type ) == 4 )
         {
-            read_sub_mb_pred( h, b, mb_type );
+            structure(sub_mb_pred)( h, b, mb_type );
             for( int mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++ )
             {
                 if( mb->sub_mb_type[ mbPartIdx ] != B_Direct_8x8 )
@@ -209,7 +209,7 @@ void read_macroblock_layer( h264_stream_t* h, bs_t* b )
                 if( !cabac ) { mb->transform_size_8x8_flag = bs_read_u(b, 1); }
                 else         { mb->transform_size_8x8_flag = bs_read_ae(b); }
             }
-            read_mb_pred( h, b, mb_type );
+            structure(mb_pred)( h, b, mb_type );
         }
         if( MbPartPredMode( mb_type, 0 ) != Intra_16x16 )
         {
@@ -231,13 +231,13 @@ void read_macroblock_layer( h264_stream_t* h, bs_t* b )
         {
             if( !cabac ) { mb->mb_qp_delta = bs_read_se(b); }
             else         { mb->mb_qp_delta = bs_read_ae(b); }
-            read_residual( h, b );
+            structure(residual)( h, b );
         }
     }
 }
 
 //7.3.5.1 Macroblock prediction syntax
-void read_mb_pred( h264_stream_t* h, bs_t* b, int mb_type )
+void structure(mb_pred)( h264_stream_t* h, bs_t* b, int mb_type )
 {
     if( MbPartPredMode( mb_type, 0 ) == Intra_4x4 ||
         MbPartPredMode( mb_type, 0 ) == Intra_8x8 ||
@@ -247,12 +247,10 @@ void read_mb_pred( h264_stream_t* h, bs_t* b, int mb_type )
         {
             for( int luma4x4BlkIdx=0; luma4x4BlkIdx<16; luma4x4BlkIdx++ )
             {
-                if( !cabac ) { mb->prev_intra4x4_pred_mode_flag[ luma4x4BlkIdx ] = bs_read_u(b, 1); }
-                else         { mb->prev_intra4x4_pred_mode_flag[ luma4x4BlkIdx ] = bs_read_ae(b); }
+                value( mb->prev_intra4x4_pred_mode_flag[ luma4x4BlkIdx ], u(1), ae );
                 if( !mb->prev_intra4x4_pred_mode_flag[ luma4x4BlkIdx ] )
                 {
-                    if( !cabac ) { mb->rem_intra4x4_pred_mode[ luma4x4BlkIdx ] = bs_read_u(b, 3); }
-                    else         { mb->rem_intra4x4_pred_mode[ luma4x4BlkIdx ] = bs_read_ae(b); }
+                    value( mb->rem_intra4x4_pred_mode[ luma4x4BlkIdx ], u(3), ae );
                 }
             }
         }
@@ -323,7 +321,7 @@ void read_mb_pred( h264_stream_t* h, bs_t* b, int mb_type )
 }
 
 //7.3.5.2  Sub-macroblock prediction syntax
-void read_sub_mb_pred( h264_stream_t* h, bs_t* b, int mb_type )
+void structure(sub_mb_pred)( h264_stream_t* h, bs_t* b, int mb_type )
 {
     for( int mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++ )
     {
@@ -388,7 +386,7 @@ void read_sub_mb_pred( h264_stream_t* h, bs_t* b, int mb_type )
 }
 
 //7.3.5.3 Residual data syntax
-void read_residual( h264_stream_t* h, bs_t* b )
+void structure(residual)( h264_stream_t* h, bs_t* b )
 {
     if( !h->pps->entropy_coding_mode_flag )
     {
@@ -400,7 +398,7 @@ void read_residual( h264_stream_t* h, bs_t* b )
     }
     if( MbPartPredMode( mb_type, 0 ) == Intra_16x16 )
     {
-        residual_block( mb->Intra16x16DCLevel, 16 );
+        structure(residual_block)( mb->Intra16x16DCLevel, 16 );
     }
     for( int i8x8 = 0; i8x8 < 4; i8x8++ ) // each luma 8x8 block
     {
@@ -412,11 +410,11 @@ void read_residual( h264_stream_t* h, bs_t* b )
                 {
                     if( MbPartPredMode( mb_type, 0 ) == Intra_16x16 )
                     {
-                        residual_block( mb->Intra16x16ACLevel[ i8x8 * 4 + i4x4 ], 15 );
+                        structure(residual_block)( mb->Intra16x16ACLevel[ i8x8 * 4 + i4x4 ], 15 );
                     }
                     else
                     {
-                        residual_block( mb->LumaLevel[ i8x8 * 4 + i4x4 ], 16 );
+                        structure(residual_block)( mb->LumaLevel[ i8x8 * 4 + i4x4 ], 16 );
                     }
                 }
                 else if( MbPartPredMode( mb_type, 0 ) == Intra_16x16 )
@@ -444,7 +442,7 @@ void read_residual( h264_stream_t* h, bs_t* b )
         }
         else if( CodedBlockPatternLuma & ( 1 << i8x8 ) )
         {
-            residual_block( mb->LumaLevel8x8[ i8x8 ], 64 );
+            structure(residual_block)( mb->LumaLevel8x8[ i8x8 ], 64 );
         }
         else
         {
@@ -461,7 +459,7 @@ void read_residual( h264_stream_t* h, bs_t* b )
         {
             if( CodedBlockPatternChroma & 3 ) // chroma DC residual present
             {
-                residual_block( mb->ChromaDCLevel[ iCbCr ], 4 * NumC8x8 );
+                structure(residual_block)( mb->ChromaDCLevel[ iCbCr ], 4 * NumC8x8 );
             }
             else
             {
@@ -479,7 +477,7 @@ void read_residual( h264_stream_t* h, bs_t* b )
                 {
                     if( CodedBlockPatternChroma & 2 )  // chroma AC residual present
                     {
-                        residual_block( mb->ChromaACLevel[ iCbCr ][ i8x8*4+i4x4 ], 15);
+                        structure(residual_block)( mb->ChromaACLevel[ iCbCr ][ i8x8*4+i4x4 ], 15);
                     }
                     else
                     {
@@ -497,7 +495,7 @@ void read_residual( h264_stream_t* h, bs_t* b )
 
 
 //7.3.5.3.1 Residual block CAVLC syntax
-void read_residual_block_cavlc( bs_t* b, int* coeffLevel, int maxNumCoeff )
+void structure(residual_block_cavlc)( bs_t* b, int* coeffLevel, int maxNumCoeff )
 {
     for( int i = 0; i < maxNumCoeff; i++ )
     {
@@ -596,7 +594,7 @@ void read_residual_block_cavlc( bs_t* b, int* coeffLevel, int maxNumCoeff )
 
 
 //7.3.5.3.2 Residual block CABAC syntax
-void read_residual_block_cabac( bs_t* b, int* coeffLevel, int maxNumCoeff )
+void structure(residual_block_cabac)( bs_t* b, int* coeffLevel, int maxNumCoeff )
 {
     if( maxNumCoeff == 64 )
     {
@@ -658,570 +656,5 @@ void read_residual_block_cabac( bs_t* b, int* coeffLevel, int maxNumCoeff )
 }
 
 
-/****** writing ******/
-
-//7.3.4 Slice data syntax
-write_slice_data( )
-{
-    if( h->pps->entropy_coding_mode_flag )
-    {
-        while( !byte_aligned( ) )
-        {
-            bs_write_f(b, 1, cabac_alignment_one_bit);
-        }
-    }
-    CurrMbAddr = first_mb_in_slice * ( 1 + MbaffFrameFlag );
-    moreDataFlag = 1;
-    prevMbSkipped = 0;
-    do
-    {
-        if( slice_type != I && slice_type != SI )
-        {
-            if( !h->pps->entropy_coding_mode_flag )
-            {
-                bs_write_ue(b, mb_skip_run);
-                prevMbSkipped = ( mb_skip_run > 0 );
-                for( int i=0; i<mb_skip_run; i++ )
-                {
-                    CurrMbAddr = NextMbAddress( CurrMbAddr );
-                }
-                moreDataFlag = more_rbsp_data( );
-            }
-            else
-            {
-                bs_write_ae(b, mb_skip_flag);
-                moreDataFlag = !mb_skip_flag;
-            }
-        }
-        if( moreDataFlag )
-        {
-            if( MbaffFrameFlag && ( CurrMbAddr % 2 == 0 ||
-                                    ( CurrMbAddr % 2 == 1 && prevMbSkipped ) ) )
-            {
-                if( !cabac ) { bs_write_u(b, 1, mb_field_decoding_flag); }
-                else         { bs_write_ae(b, mb_field_decoding_flag); }
-            }
-            macroblock_layer( );
-        }
-        if( !h->pps->entropy_coding_mode_flag )
-        {
-            moreDataFlag = more_rbsp_data( );
-        }
-        else
-        {
-            if( slice_type != I && slice_type != SI )
-            {
-                prevMbSkipped = mb_skip_flag;
-            }
-            if( MbaffFrameFlag && CurrMbAddr % 2 == 0 )
-            {
-                moreDataFlag = 1;
-            }
-            else
-            {
-                bs_write_ae(b, end_of_slice_flag);
-                moreDataFlag = !end_of_slice_flag;
-            }
-        }
-        CurrMbAddr = NextMbAddress( CurrMbAddr );
-    } while( moreDataFlag );
-}
-
-
-//7.3.5 Macroblock layer syntax
-write_macroblock_layer( )
-{
-    if( !cabac ) { bs_write_ue(b, mb_type); }
-    else         { bs_write_ae(b, mb_type); }
-    if( mb_type == I_PCM )
-    {
-        while( !bs_byte_aligned(b) )
-        {
-            bs_write_f(b, 1, pcm_alignment_zero_bit);
-        }
-        for( int i = 0; i < 256; i++ )
-        {
-            bs_write_u(b, pcm_sample_luma[ i ]);
-        }
-        for( int i = 0; i < 2 * MbWidthC * MbHeightC; i++ )
-        {
-            bs_write_u(b, pcm_sample_chroma[ i ]);
-        }
-    }
-    else
-    {
-        noSubMbPartSizeLessThan8x8Flag = 1;
-        if( mb_type != I_NxN &&
-            MbPartPredMode( mb_type, 0 ) != Intra_16x16 &&
-            NumMbPart( mb_type ) == 4 )
-        {
-            write_sub_mb_pred( mb_type );
-            for( int mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++ )
-            {
-                if( sub_mb_type[ mbPartIdx ] != B_Direct_8x8 )
-                {
-                    if( NumSubMbPart( sub_mb_type[ mbPartIdx ] ) > 1 )
-                    {
-                        noSubMbPartSizeLessThan8x8Flag = 0;
-                    }
-                }
-                else if( !h->sps->direct_8x8_inference_flag )
-                {
-                    noSubMbPartSizeLessThan8x8Flag = 0;
-                }
-            }
-        }
-        else
-        {
-            if( h->pps->transform_8x8_mode_flag && mb_type == I_NxN )
-            {
-                if( !cabac ) { bs_write_u(b, 1, transform_size_8x8_flag); }
-                else         { bs_write_ae(b, transform_size_8x8_flag); }
-            }
-            write_mb_pred( mb_type );
-        }
-        if( MbPartPredMode( mb_type, 0 ) != Intra_16x16 )
-        {
-            if( !cabac ) { bs_write_me(b, coded_block_pattern); }
-            else         { bs_write_ae(b, coded_block_pattern); }
-            if( CodedBlockPatternLuma > 0 &&
-                h->pps->transform_8x8_mode_flag && mb_type != I_NxN &&
-                noSubMbPartSizeLessThan8x8Flag &&
-                ( mb_type != B_Direct_16x16 || h->sps->direct_8x8_inference_flag ) )
-            {
-                if( !cabac ) { bs_write_u(b, 1, transform_size_8x8_flag); }
-                else         { bs_write_ae(b, transform_size_8x8_flag); }
-            }
-        }
-        if( CodedBlockPatternLuma > 0 || CodedBlockPatternChroma > 0 ||
-            MbPartPredMode( mb_type, 0 ) == Intra_16x16 )
-        {
-            if( !cabac ) { bs_write_se(b, mb_qp_delta); }
-            else         { bs_write_ae(b, mb_qp_delta); }
-            write_residual( );
-        }
-    }
-}
-
-//7.3.5.1 Macroblock prediction syntax
-write_mb_pred( mb_type )
-{
-    if( MbPartPredMode( mb_type, 0 ) == Intra_4x4 ||
-        MbPartPredMode( mb_type, 0 ) == Intra_8x8 ||
-        MbPartPredMode( mb_type, 0 ) == Intra_16x16 )
-    {
-        if( MbPartPredMode( mb_type, 0 ) == Intra_4x4 )
-        {
-            for( int luma4x4BlkIdx=0; luma4x4BlkIdx<16; luma4x4BlkIdx++ )
-            {
-                if( !cabac ) { bs_write_u(b, 1, prev_intra4x4_pred_mode_flag[ luma4x4BlkIdx ]); }
-                else         { bs_write_ae(b, prev_intra4x4_pred_mode_flag[ luma4x4BlkIdx ]); }
-                if( !prev_intra4x4_pred_mode_flag[ luma4x4BlkIdx ] )
-                {
-                    if( !cabac ) { bs_write_u(b, 3, rem_intra4x4_pred_mode[ luma4x4BlkIdx ]); }
-                    else         { bs_write_ae(b, rem_intra4x4_pred_mode[ luma4x4BlkIdx ]); }
-                }
-            }
-        }
-        if( MbPartPredMode( mb_type, 0 ) == Intra_8x8 )
-        {
-            for( int luma8x8BlkIdx=0; luma8x8BlkIdx<4; luma8x8BlkIdx++ )
-            {
-                if( !cabac ) { bs_write_u(b, 1, prev_intra8x8_pred_mode_flag[ luma8x8BlkIdx ]); }
-                else         { bs_write_ae(b, prev_intra8x8_pred_mode_flag[ luma8x8BlkIdx ]); }
-                if( !prev_intra8x8_pred_mode_flag[ luma8x8BlkIdx ] )
-                {
-                    if( !cabac ) { bs_write_u(b, 3, rem_intra8x8_pred_mode[ luma8x8BlkIdx ]); }
-                    else         { bs_write_ae(b, rem_intra8x8_pred_mode[ luma8x8BlkIdx ]); }
-                }
-            }
-        }
-        if( h->sps->chroma_format_idc != 0 )
-        {
-            if( !cabac ) { bs_write_ue(b, intra_chroma_pred_mode); }
-            else         { bs_write_ae(b, intra_chroma_pred_mode); }
-        }
-    }
-    else if( MbPartPredMode( mb_type, 0 ) != Direct )
-    {
-        for( int mbPartIdx = 0; mbPartIdx < NumMbPart( mb_type ); mbPartIdx++)
-        {
-            if( ( h->pps->num_ref_idx_l0_active_minus1 > 0 ||
-                  mb_field_decoding_flag ) &&
-                MbPartPredMode( mb_type, mbPartIdx ) != Pred_L1 )
-            {
-                if( !cabac ) { bs_write_te(b, ref_idx_l0[ mbPartIdx ]); }
-                else         { bs_write_ae(b, ref_idx_l0[ mbPartIdx ]); }
-            }
-        }
-        for( int mbPartIdx = 0; mbPartIdx < NumMbPart( mb_type ); mbPartIdx++)
-        {
-            if( ( h->pps->num_ref_idx_l1_active_minus1 > 0 ||
-                  mb_field_decoding_flag ) &&
-                MbPartPredMode( mb_type, mbPartIdx ) != Pred_L0 )
-            {
-                if( !cabac ) { bs_write_te(b, ref_idx_l1[ mbPartIdx ]); }
-                else         { bs_write_ae(b, ref_idx_l1[ mbPartIdx ]); }
-            }
-        }
-        for( int mbPartIdx = 0; mbPartIdx < NumMbPart( mb_type ); mbPartIdx++)
-        {
-            if( MbPartPredMode ( mb_type, mbPartIdx ) != Pred_L1 )
-            {
-                for( int compIdx = 0; compIdx < 2; compIdx++ )
-                {
-                    if( !cabac ) { bs_write_se(b, mvd_l0[ mbPartIdx ][ 0 ][ compIdx ]); }
-                    else         { bs_write_ae(b, mvd_l0[ mbPartIdx ][ 0 ][ compIdx ]); }
-                }
-            }
-        }
-        for( int mbPartIdx = 0; mbPartIdx < NumMbPart( mb_type ); mbPartIdx++)
-        {
-            if( MbPartPredMode( mb_type, mbPartIdx ) != Pred_L0 )
-            {
-                for( int compIdx = 0; compIdx < 2; compIdx++ )
-                {
-                    if( !cabac ) { bs_write_se(b, mvd_l1[ mbPartIdx ][ 0 ][ compIdx ]); }
-                    else         { bs_write_ae(b, mvd_l1[ mbPartIdx ][ 0 ][ compIdx ]); }
-                }
-            }
-        }
-    }
-}
-
-//7.3.5.2  Sub-macroblock prediction syntax
-write_sub_mb_pred( mb_type )
-{
-    for( int mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++ )
-    {
-        if( !cabac ) { bs_write_ue(b, sub_mb_type[ mbPartIdx ]); }
-        else         { bs_write_ae(b, sub_mb_type[ mbPartIdx ]); }
-    }
-    for( int mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++ )
-    {
-        if( ( h->pps->num_ref_idx_l0_active_minus1 > 0 || mb_field_decoding_flag ) &&
-            mb_type != P_8x8ref0 &&
-            sub_mb_type[ mbPartIdx ] != B_Direct_8x8 &&
-            SubMbPredMode( sub_mb_type[ mbPartIdx ] ) != Pred_L1 )
-        {
-            if( !cabac ) { bs_write_te(b, ref_idx_l0[ mbPartIdx ]); }
-            else         { bs_write_ae(b, ref_idx_l0[ mbPartIdx ]); }
-        }
-    }
-    for( int mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++ )
-    {
-        if( (h->pps->num_ref_idx_l1_active_minus1 > 0 || mb_field_decoding_flag ) &&
-            sub_mb_type[ mbPartIdx ] != B_Direct_8x8 &&
-            SubMbPredMode( sub_mb_type[ mbPartIdx ] ) != Pred_L0 )
-        {
-            if( !cabac ) { bs_write_te(b, ref_idx_l1[ mbPartIdx ]); }
-            else         { bs_write_ae(b, ref_idx_l1[ mbPartIdx ]); }
-        }
-    }
-    for( int mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++ )
-    {
-        if( sub_mb_type[ mbPartIdx ] != B_Direct_8x8 &&
-            SubMbPredMode( sub_mb_type[ mbPartIdx ] ) != Pred_L1 )
-        {
-            for( int subMbPartIdx = 0;
-                 subMbPartIdx < NumSubMbPart( sub_mb_type[ mbPartIdx ] );
-                 subMbPartIdx++)
-            {
-                for( int compIdx = 0; compIdx < 2; compIdx++ )
-                {
-                    if( !cabac ) { bs_write_se(b, mvd_l0[ mbPartIdx ][ subMbPartIdx ][ compIdx ]); }
-                    else         { bs_write_ae(b, mvd_l0[ mbPartIdx ][ subMbPartIdx ][ compIdx ]); }
-                }
-            }
-        }
-    }
-    for( int mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++ )
-    {
-        if( sub_mb_type[ mbPartIdx ] != B_Direct_8x8 &&
-            SubMbPredMode( sub_mb_type[ mbPartIdx ] ) != Pred_L0 )
-        {
-            for( int subMbPartIdx = 0;
-                 subMbPartIdx < NumSubMbPart( sub_mb_type[ mbPartIdx ] );
-                 subMbPartIdx++)
-            {
-                for( int compIdx = 0; compIdx < 2; compIdx++ )
-                {
-                    if( !cabac ) { bs_write_se(b, mvd_l1[ mbPartIdx ][ subMbPartIdx ][ compIdx ]); }
-                    else         { bs_write_ae(b, mvd_l1[ mbPartIdx ][ subMbPartIdx ][ compIdx ]); }
-                }
-            }
-        }
-    }
-}
-
-//7.3.5.3 Residual data syntax
-write_residual( )
-{
-    if( !h->pps->entropy_coding_mode_flag )
-    {
-        residual_block = residual_block_cavlc;
-    }
-    else
-    {
-        residual_block = residual_block_cabac;
-    }
-    if( MbPartPredMode( mb_type, 0 ) == Intra_16x16 )
-    {
-        residual_block( Intra16x16DCLevel, 16 );
-    }
-    for( int i8x8 = 0; i8x8 < 4; i8x8++ ) // each luma 8x8 block
-    {
-        if( !transform_size_8x8_flag || !h->pps->entropy_coding_mode_flag )
-        {
-            for( int i4x4 = 0; i4x4 < 4; i4x4++ ) // each 4x4 sub-block of block
-            {
-                if( CodedBlockPatternLuma & ( 1 << i8x8 ) )
-                {
-                    if( MbPartPredMode( mb_type, 0 ) == Intra_16x16 )
-                    {
-                        residual_block( Intra16x16ACLevel[ i8x8 * 4 + i4x4 ], 15 );
-                    }
-                    else
-                    {
-                        residual_block( LumaLevel[ i8x8 * 4 + i4x4 ], 16 );
-                    }
-                }
-                else if( MbPartPredMode( mb_type, 0 ) == Intra_16x16 )
-                {
-                    for( int i = 0; i < 15; i++ )
-                    {
-                        Intra16x16ACLevel[ i8x8 * 4 + i4x4 ][ i ] = 0;
-                    }
-                }
-                else
-                {
-                    for( int i = 0; i < 16; i++ )
-                    {
-                        LumaLevel[ i8x8 * 4 + i4x4 ][ i ] = 0;
-                    }
-                }
-                if( !h->pps->entropy_coding_mode_flag && transform_size_8x8_flag )
-                {
-                    for( int i = 0; i < 16; i++ )
-                    {
-                        LumaLevel8x8[ i8x8 ][ 4 * i + i4x4 ] = LumaLevel[ i8x8 * 4 + i4x4 ][ i ];
-                    }
-                }
-            }
-        }
-        else if( CodedBlockPatternLuma & ( 1 << i8x8 ) )
-        {
-            residual_block( LumaLevel8x8[ i8x8 ], 64 );
-        }
-        else
-        {
-            for( int i = 0; i < 64; i++ )
-            {
-                LumaLevel8x8[ i8x8 ][ i ] = 0;
-            }
-        }
-    }
-    if( h->sps->chroma_format_idc != 0 )
-    {
-        NumC8x8 = 4 / ( SubWidthC * SubHeightC );
-        for( int iCbCr = 0; iCbCr < 2; iCbCr++ )
-        {
-            if( CodedBlockPatternChroma & 3 ) // chroma DC residual present
-            {
-                residual_block( ChromaDCLevel[ iCbCr ], 4 * NumC8x8 );
-            }
-            else
-            {
-                for( int i = 0; i < 4 * NumC8x8; i++ )
-                {
-                    ChromaDCLevel[ iCbCr ][ i ] = 0;
-                }
-            }
-        }
-        for( int iCbCr = 0; iCbCr < 2; iCbCr++ )
-        {
-            for( int i8x8 = 0; i8x8 < NumC8x8; i8x8++ )
-            {
-                for( int i4x4 = 0; i4x4 < 4; i4x4++ )
-                {
-                    if( CodedBlockPatternChroma & 2 )  // chroma AC residual present
-                    {
-                        residual_block( ChromaACLevel[ iCbCr ][ i8x8*4+i4x4 ], 15);
-                    }
-                    else
-                    {
-                        for( int i = 0; i < 15; i++ )
-                        {
-                            ChromaACLevel[ iCbCr ][ i8x8*4+i4x4 ][ i ] = 0;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-}
-
-
-//7.3.5.3.1 Residual block CAVLC syntax
-write_residual_block_cavlc( coeffLevel, maxNumCoeff )
-{
-    for( int i = 0; i < maxNumCoeff; i++ )
-    {
-        coeffLevel[ i ] = 0;
-    }
-    bs_write_ce(b, coeff_token);
-    if( TotalCoeff( coeff_token ) > 0 )
-    {
-        if( TotalCoeff( coeff_token ) > 10 && TrailingOnes( coeff_token ) < 3 )
-        {
-            suffixLength = 1;
-        }
-        else
-        {
-            suffixLength = 0;
-        }
-        for( int i = 0; i < TotalCoeff( coeff_token ); i++ )
-        {
-            if( i < TrailingOnes( coeff_token ) )
-            {
-                bs_write_u(b, 1, trailing_ones_sign_flag);
-                level[ i ] = 1 - 2 * trailing_ones_sign_flag;
-            }
-            else
-            {
-                bs_write_ce(b, level_prefix);
-                levelCode = ( Min( 15, level_prefix ) << suffixLength );
-                if( suffixLength > 0 || level_prefix >= 14 )
-                {
-                    bs_write_u(b, level_suffix);
-                    levelCode += level_suffix;
-                }
-                if( level_prefix > = 15 && suffixLength == 0 )
-                {
-                    levelCode += 15;
-                }
-                if( level_prefix > = 16 )
-                {
-                    levelCode += ( 1 << ( level_prefix - 3 ) ) - 4096;
-                }
-                if( i == TrailingOnes( coeff_token ) &&
-                    TrailingOnes( coeff_token ) < 3 )
-                {
-                    levelCode += 2;
-                }
-                if( levelCode % 2 == 0 )
-                {
-                    level[ i ] = ( levelCode + 2 ) >> 1;
-                }
-                else
-                {
-                    level[ i ] = ( -levelCode - 1 ) >> 1;
-                }
-                if( suffixLength == 0 )
-                {
-                    suffixLength = 1;
-                }
-                if( Abs( level[ i ] ) > ( 3 << ( suffixLength - 1 ) ) &&
-                    suffixLength < 6 )
-                {
-                    suffixLength++;
-                }
-            }
-        }
-        if( TotalCoeff( coeff_token ) < maxNumCoeff )
-        {
-            bs_write_ce(b, total_zeros);
-            zerosLeft = total_zeros;
-        } else
-        {
-            zerosLeft = 0;
-        }
-        for( int i = 0; i < TotalCoeff( coeff_token ) - 1; i++ )
-        {
-            if( zerosLeft > 0 )
-            {
-                bs_write_ce(b, run_before);
-                run[ i ] = run_before;
-            } else
-            {
-                run[ i ] = 0;
-            }
-            zerosLeft = zerosLeft - run[ i ];
-        }
-        run[ TotalCoeff( coeff_token ) - 1 ] = zerosLeft;
-        coeffNum = -1;
-
-        for( int i = TotalCoeff( coeff_token ) - 1; i >= 0; i-- )
-        {
-            coeffNum += run[ i ] + 1;
-            coeffLevel[ coeffNum ] = level[ i ];
-        }
-    }
-}
-
-
-
-//7.3.5.3.2 Residual block CABAC syntax
-write_residual_block_cabac( coeffLevel, maxNumCoeff )
-{
-    if( maxNumCoeff == 64 )
-    {
-        coded_block_flag = 1;
-    }
-    else
-    {
-        bs_write_ae(b, coded_block_flag);
-    }
-    if( coded_block_flag )
-    {
-        numCoeff = maxNumCoeff;
-        i=0;
-        do
-        {
-            bs_write_ae(b, significant_coeff_flag[ i ]);
-            if( significant_coeff_flag[ i ] )
-            {
-                bs_write_ae(b, last_significant_coeff_flag[ i ]);
-                if( last_significant_coeff_flag[ i ] )
-                {
-                    numCoeff = i + 1;
-                    for( int j = numCoeff; j < maxNumCoeff; j++ )
-                    {
-                        coeffLevel[ j ] = 0;
-                    }
-                }
-            }
-            i++;
-        } while( i < numCoeff - 1 );
-
-        bs_write_ae(b, coeff_abs_level_minus1[ numCoeff - 1 ]);
-        bs_write_ae(b, coeff_sign_flag[ numCoeff - 1 ]);
-        coeffLevel[ numCoeff - 1 ] =
-            ( coeff_abs_level_minus1[ numCoeff - 1 ] + 1 ) *
-            ( 1 - 2 * coeff_sign_flag[ numCoeff - 1 ] );
-        for( int i = numCoeff - 2; i >= 0; i-- )
-        {
-            if( significant_coeff_flag[ i ] )
-            {
-                bs_write_ae(b, coeff_abs_level_minus1[ i ]);
-                bs_write_ae(b, coeff_sign_flag[ i ]);
-                coeffLevel[ i ] = ( coeff_abs_level_minus1[ i ] + 1 ) *
-                    ( 1 - 2 * coeff_sign_flag[ i ] );
-            }
-            else
-            {
-                coeffLevel[ i ] = 0;
-            }
-        }
-    }
-    else
-    {
-        for( int i = 0; i < maxNumCoeff; i++ )
-        {
-            coeffLevel[ i ] = 0;
-        }
-    }
-}
 
 #endif
