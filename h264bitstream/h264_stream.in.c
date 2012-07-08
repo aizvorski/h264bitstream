@@ -92,7 +92,7 @@ void structure(seq_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
     value( sps->constraint_set3_flag, u1 );
     value( sps->constraint_set4_flag, u1 );
     value( sps->constraint_set5_flag, u1 );
-    value( sps->reserved_zero_2bits, f(2, 0) );
+    value( reserved_zero_2bits, f(2, 0) );
     value( sps->level_idc, u8 );
     value( sps->seq_parameter_set_id, ue );
 
@@ -534,7 +534,6 @@ slice_data_partition_c_layer_rbsp( ) {
 void structure(rbsp_slice_trailing_bits)(h264_stream_t* h, bs_t* b)
 {
     structure(rbsp_trailing_bits)(h, b);
-    int cabac_zero_word;
     if( h->pps->entropy_coding_mode_flag )
     {
         while( more_rbsp_trailing_data(h, b) )

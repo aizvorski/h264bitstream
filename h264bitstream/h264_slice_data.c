@@ -47,7 +47,7 @@ void read_slice_data( h264_stream_t* h, bs_t* b )
     {
         while( !bs_byte_aligned(b) )
         {
-            // ERROR: value( cabac_alignment_one_bit, f(1) );
+            /* cabac_alignment_one_bit */ bs_skip_u(b, 1);
         }
     }
     int CurrMbAddr = h->sh->first_mb_in_slice * ( 1 + MbaffFrameFlag );
@@ -650,7 +650,7 @@ void write_slice_data( h264_stream_t* h, bs_t* b )
     {
         while( !bs_byte_aligned(b) )
         {
-            // ERROR: value( cabac_alignment_one_bit, f(1) );
+            /* cabac_alignment_one_bit */ bs_write_u(b, 1, 1);
         }
     }
     int CurrMbAddr = h->sh->first_mb_in_slice * ( 1 + MbaffFrameFlag );
@@ -1253,7 +1253,7 @@ void read_debug_slice_data( h264_stream_t* h, bs_t* b )
     {
         while( !bs_byte_aligned(b) )
         {
-            printf("%d.%d: ", b->p - b->start, b->bits_left); // ERROR: value( cabac_alignment_one_bit, f(1) ); printf("cabac_alignment_one_bit: %d \n", cabac_alignment_one_bit); 
+            printf("%d.%d: ", b->p - b->start, b->bits_left); int cabac_alignment_one_bit = bs_read_u(b, 1); printf("cabac_alignment_one_bit: %d \n", cabac_alignment_one_bit); 
         }
     }
     int CurrMbAddr = h->sh->first_mb_in_slice * ( 1 + MbaffFrameFlag );
