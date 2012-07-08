@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
             }
 
             p += nal_start;
-            read_nal_unit(h, p, nal_end - nal_start);
+            read_debug_nal_unit(h, p, nal_end - nal_start);
 
             if ( opt_probe && h->nal->nal_unit_type == NAL_UNIT_TYPE_SPS )
             {
@@ -164,9 +164,9 @@ int main(int argc, char *argv[])
             if ( opt_verbose > 0 )
             {
                 fprintf( h264_dbgfile, "XX ");
-                debug_bytes(p-4, nal_end - nal_start + 4 >= 16 ? 16: nal_end - nal_start + 4);
+                // debug_bytes(p-4, nal_end - nal_start + 4 >= 16 ? 16: nal_end - nal_start + 4);
 
-                debug_nal(h, h->nal);
+                // debug_nal(h, h->nal);
             }
 
             p += (nal_end - nal_start);

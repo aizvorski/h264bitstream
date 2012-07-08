@@ -4,7 +4,7 @@ INCLUDES =
 LIBS = 
 
 CC = gcc
-CFLAGS += -std=c99 -pedantic -Wall -W -Wshadow -Wwrite-strings -Wno-unused -g -O3 $(INCLUDES)
+CFLAGS += -std=c99 -pedantic -Wall -W -Wshadow -Wwrite-strings -Wno-unused -g $(INCLUDES)
 
 LD = gcc
 LDFLAGS += $(LIBS)
@@ -16,8 +16,11 @@ BINARIES = h264_analyze
 
 all: libh264bitstream.a $(BINARIES)
 
-h264_slice_data.c: h264_slice_data.in.c
+h264_slice_data.c: h264_slice_data.in.c process.pl
 	perl process.pl > h264_slice_data.c < h264_slice_data.in.c
+
+h264_stream.c: h264_stream.in.c process.pl
+	perl process.pl > h264_stream.c < h264_stream.in.c
 
 h264_analyze: h264_analyze.o libh264bitstream.a
 	$(LD) $(LDFLAGS) -o h264_analyze h264_analyze.o -L. -lh264bitstream -lm
