@@ -2,6 +2,7 @@
  * h264bitstream - a library for reading and writing H.264 video
  * Copyright (C) 2005-2007 Auroras Entertainment, LLC
  * Copyright (C) 2008-2011 Avail-TVN
+ * Copyright (C) 2012 Alex Izvorski
  * 
  * Written by Alex Izvorski <aizvorski@gmail.com> and Alex Giladi <alex.giladi@gmail.com>
  * 
@@ -21,94 +22,7 @@
  */
 
 #include "h264_stream.h"
-
-/******* data *******/
-
-//TODO determine the size of all arrays
-typedef struct
-{
-    int mb_type;
-    int sub_mb_type[4]; // [ mbPartIdx ]
-
-    // pcm mb only
-    int pcm_sample_luma[256];
-    int pcm_sample_chroma[512];
-
-    int transform_size_8x8_flag;
-    int mb_qp_delta;
-    int mb_field_decoding_flag;
-    int mb_skip_flag;
-
-    // intra mb only
-    int prev_intra4x4_pred_mode_flag[16]; // [ luma4x4BlkIdx ]
-    int rem_intra4x4_pred_mode[16]; // [ luma4x4BlkIdx ]
-    int prev_intra8x8_pred_mode_flag[4]; // [ luma8x8BlkIdx ]
-    int rem_intra8x8_pred_mode[4]; // [ luma8x8BlkIdx ]
-    int intra_chroma_pred_mode;
-
-    // inter mb only
-    int ref_idx_l0[4]; // [ mbPartIdx ]
-    int ref_idx_l1[4]; // [ mbPartIdx ]
-    int mvd_l0[4][4][2]; // [ mbPartIdx ][ subMbPartIdx ][ compIdx ]
-    int mvd_l1[4][4][2]; // [ mbPartIdx ][ subMbPartIdx ][ compIdx ]
-
-    // residuals
-    int coded_block_pattern;
-
-    int Intra16x16DCLevel[16]; // [ 16 ]
-    int Intra16x16ACLevel[16][15]; // [ i8x8 * 4 + i4x4 ][ 15 ]
-    int LumaLevel[16][16]; // [ i8x8 * 4 + i4x4 ][ 16 ]
-    int LumaLevel8x8[4][64]; // [ i8x8 ][ 64 ]
-    int ChromaDCLevel[2][16]; // [ iCbCr ][ 4 * NumC8x8 ]
-    int ChromaACLevel[2][16][15]; // [ iCbCr ][ i8x8*4+i4x4 ][ 15 ]
-
-} macroblock_t;
-
-
-typedef struct 
-{
-    macroblock_t* mbs;
-} slice_t;
-
-
-/****** bitstream functions - not already implemented ******/
-
-uint32_t bs_read_te(bs_t* b);
-void bs_write_te(bs_t* b, uint32_t v);
-uint32_t bs_read_me(bs_t* b);
-void bs_write_me(bs_t* b, uint32_t v);
-
-// CABAC
-// 9.3 CABAC parsing process for slice data
-// NOTE: these functions will need more arguments, since how they work depends on *what* is being encoded/decoded
-// for now, just a placeholder for places that we will need to call this from
-uint32_t bs_read_ae(bs_t* b);
-void bs_write_ae(bs_t* b, uint32_t v);
-
-// CALVC
-// 9.2 CAVLC parsing process for transform coefficient levels
-uint32_t bs_read_ce(bs_t* b);
-void bs_write_ce(bs_t* b, uint32_t v);
-
-/****** defines *****/
-
-#define cabac 0
-#define I 0
-#define SI 0
-#define I_PCM 0
-#define I_NxN 0
-#define Intra_16x16 0
-#define Intra_4x4 0
-#define Intra_8x8 0
-#define B_Direct_8x8 0
-#define Direct 0
-#define Pred_L0 0
-#define Pred_L1 0
-
-int NextMbAddress(int CurrMbAddr);
-int MbPartPredMode( int mb_type, int x );
-int NumMbPart( int mb_type );
-
+#include "h264_slice_data.h"
 
 /****** reading ******/
 
@@ -124,12 +38,14 @@ void structure(slice_data)( h264_stream_t* h, bs_t* b )
             value( cabac_alignment_one_bit, f(1) );
         }
     }
-    int CurrMbAddr = first_mb_in_slice * ( 1 + MbaffFrameFlag );
+    int CurrMbAddr = h->sh->first_mb_in_slice * ( 1 + MbaffFrameFlag );
     int moreDataFlag = 1;
     int prevMbSkipped = 0;
     do
     {
-        if( slice_type != I && slice_type != SI )
+        int mb_skip_flag;
+    int mb_skip_run;
+        if( h->sh->slice_type != SH_SLICE_TYPE_I && h->sh->slice_type != SH_SLICE_TYPE_SI )
         {
             if( !h->pps->entropy_coding_mode_flag )
             {
@@ -162,7 +78,7 @@ void structure(slice_data)( h264_stream_t* h, bs_t* b )
         }
         else
         {
-            if( slice_type != I && slice_type != SI )
+        if( h->sh->slice_type != SH_SLICE_TYPE_I && h->sh->slice_type != SH_SLICE_TYPE_SI )
             {
                 prevMbSkipped = mb_skip_flag;
             }
@@ -172,6 +88,7 @@ void structure(slice_data)( h264_stream_t* h, bs_t* b )
             }
             else
             {
+            int end_of_slice_flag;
                 value( end_of_slice_flag, ae );
                 moreDataFlag = !end_of_slice_flag;
             }
@@ -188,7 +105,7 @@ void structure(macroblock_layer)( h264_stream_t* h, bs_t* b )
     value( mb->mb_type, ue, ae );
     if( mb->mb_type == I_PCM )
     {
-        while( !byte_aligned( ) )
+        while( !bs_byte_aligned(b) )
         {
             value( pcm_alignment_zero_bit, f(1) );
         }
@@ -235,8 +152,6 @@ void structure(macroblock_layer)( h264_stream_t* h, bs_t* b )
         if( MbPartPredMode( mb->mb_type, 0 ) != Intra_16x16 )
         {
             value( mb->coded_block_pattern, me, ae );
-            CodedBlockPatternLuma = mb->coded_block_pattern % 16;
-            CodedBlockPatternChroma = mb->coded_block_pattern / 16;
             if( CodedBlockPatternLuma > 0 &&
                 h->pps->transform_8x8_mode_flag && mb->mb_type != I_NxN &&
                 noSubMbPartSizeLessThan8x8Flag &&
@@ -400,6 +315,7 @@ void structure(residual)( h264_stream_t* h, bs_t* b )
 {
     macroblock_t* mb;
 
+/*
     if( !h->pps->entropy_coding_mode_flag )
     {
         residual_block = residual_block_cavlc;
@@ -408,9 +324,13 @@ void structure(residual)( h264_stream_t* h, bs_t* b )
     {
         residual_block = residual_block_cabac;
     }
+*/
+    // FIXME
+#define read_residual_block read_residual_block_cavlc
+
     if( MbPartPredMode( mb->mb_type, 0 ) == Intra_16x16 )
     {
-        structure(residual_block)( mb->Intra16x16DCLevel, 16 );
+        structure(residual_block)( b, mb->Intra16x16DCLevel, 16 );
     }
     for( int i8x8 = 0; i8x8 < 4; i8x8++ ) // each luma 8x8 block
     {
@@ -422,11 +342,11 @@ void structure(residual)( h264_stream_t* h, bs_t* b )
                 {
                     if( MbPartPredMode( mb->mb_type, 0 ) == Intra_16x16 )
                     {
-                        structure(residual_block)( mb->Intra16x16ACLevel[ i8x8 * 4 + i4x4 ], 15 );
+                        structure(residual_block)( b, mb->Intra16x16ACLevel[ i8x8 * 4 + i4x4 ], 15 );
                     }
                     else
                     {
-                        structure(residual_block)( mb->LumaLevel[ i8x8 * 4 + i4x4 ], 16 );
+                        structure(residual_block)( b, mb->LumaLevel[ i8x8 * 4 + i4x4 ], 16 );
                     }
                 }
                 else if( MbPartPredMode( mb->mb_type, 0 ) == Intra_16x16 )
@@ -454,7 +374,7 @@ void structure(residual)( h264_stream_t* h, bs_t* b )
         }
         else if( CodedBlockPatternLuma & ( 1 << i8x8 ) )
         {
-            structure(residual_block)( mb->LumaLevel8x8[ i8x8 ], 64 );
+            structure(residual_block)( b, mb->LumaLevel8x8[ i8x8 ], 64 );
         }
         else
         {
@@ -471,7 +391,7 @@ void structure(residual)( h264_stream_t* h, bs_t* b )
         {
             if( CodedBlockPatternChroma & 3 ) // chroma DC residual present
             {
-                structure(residual_block)( mb->ChromaDCLevel[ iCbCr ], 4 * NumC8x8 );
+                structure(residual_block)( b, mb->ChromaDCLevel[ iCbCr ], 4 * NumC8x8 );
             }
             else
             {
@@ -489,7 +409,7 @@ void structure(residual)( h264_stream_t* h, bs_t* b )
                 {
                     if( CodedBlockPatternChroma & 2 )  // chroma AC residual present
                     {
-                        structure(residual_block)( mb->ChromaACLevel[ iCbCr ][ i8x8*4+i4x4 ], 15);
+                        structure(residual_block)( b, mb->ChromaACLevel[ iCbCr ][ i8x8*4+i4x4 ], 15);
                     }
                     else
                     {
@@ -509,11 +429,15 @@ void structure(residual)( h264_stream_t* h, bs_t* b )
 //7.3.5.3.1 Residual block CAVLC syntax
 void structure(residual_block_cavlc)( bs_t* b, int* coeffLevel, int maxNumCoeff )
 {
+    int level[256];
+    int run[256];
     for( int i = 0; i < maxNumCoeff; i++ )
     {
         coeffLevel[ i ] = 0;
     }
+    int coeff_token;
     value( coeff_token, ce );
+    int suffixLength;
     if( TotalCoeff( coeff_token ) > 0 )
     {
         if( TotalCoeff( coeff_token ) > 10 && TrailingOnes( coeff_token ) < 3 )
@@ -528,23 +452,27 @@ void structure(residual_block_cavlc)( bs_t* b, int* coeffLevel, int maxNumCoeff 
         {
             if( i < TrailingOnes( coeff_token ) )
             {
+                int trailing_ones_sign_flag;
                 value( trailing_ones_sign_flag, u(1) );
                 level[ i ] = 1 - 2 * trailing_ones_sign_flag;
             }
             else
             {
+                int level_prefix;
                 value( level_prefix, ce );
+                int levelCode;
                 levelCode = ( Min( 15, level_prefix ) << suffixLength );
                 if( suffixLength > 0 || level_prefix >= 14 )
                 {
+                    int level_suffix;
                     value( level_suffix, u ); // FIXME
                     levelCode += level_suffix;
                 }
-                if( level_prefix > = 15 && suffixLength == 0 )
+                if( level_prefix >= 15 && suffixLength == 0 )
                 {
                     levelCode += 15;
                 }
-                if( level_prefix > = 16 )
+                if( level_prefix >= 16 )
                 {
                     levelCode += ( 1 << ( level_prefix - 3 ) ) - 4096;
                 }
@@ -572,8 +500,10 @@ void structure(residual_block_cavlc)( bs_t* b, int* coeffLevel, int maxNumCoeff 
                 }
             }
         }
+    int zerosLeft;
         if( TotalCoeff( coeff_token ) < maxNumCoeff )
         {
+            int total_zeros;
             value( total_zeros, ce );
             zerosLeft = total_zeros;
         } else
@@ -584,6 +514,7 @@ void structure(residual_block_cavlc)( bs_t* b, int* coeffLevel, int maxNumCoeff 
         {
             if( zerosLeft > 0 )
             {
+                int run_before;
                 value( run_before, ce );
                 run[ i ] = run_before;
             } else
@@ -593,7 +524,7 @@ void structure(residual_block_cavlc)( bs_t* b, int* coeffLevel, int maxNumCoeff 
             zerosLeft = zerosLeft - run[ i ];
         }
         run[ TotalCoeff( coeff_token ) - 1 ] = zerosLeft;
-        coeffNum = -1;
+        int coeffNum = -1;
 
         for( int i = TotalCoeff( coeff_token ) - 1; i >= 0; i-- )
         {
@@ -604,7 +535,7 @@ void structure(residual_block_cavlc)( bs_t* b, int* coeffLevel, int maxNumCoeff 
 }
 
 
-
+#ifdef HAVE_CABAC
 //7.3.5.3.2 Residual block CABAC syntax
 void structure(residual_block_cabac)( bs_t* b, int* coeffLevel, int maxNumCoeff )
 {
@@ -667,4 +598,4 @@ void structure(residual_block_cabac)( bs_t* b, int* coeffLevel, int maxNumCoeff 
     }
 }
 
-
+#endif
