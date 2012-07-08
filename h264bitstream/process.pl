@@ -8,7 +8,7 @@ while ($code =~ m{\n(void structure.*)}mg)
     $decl .= $1 . ";\n";
 }
 
-$code =~ s{(.*)#function_declarations}{#function_declarations}s;
+$code =~ s{(.*)#end_preamble}{}s;
 $preamble = $1;
 
 print $preamble;
@@ -18,11 +18,15 @@ $code =~ s{#function_declarations}{$decl};
 $code_read = $code;
 $code_read =~ s{^(\s*) value \s* \( \s* ([^,]*) , (.*) \);}{ &proc_value_read($2, $3, $1) }exmg;
 $code_read =~ s{structure\( (\w+) \)}{read_$1}xg;
+$code_read =~ s{is_reading}{1}g;
+$code_read =~ s{is_writing}{0}g;
 print $code_read;
 
 $code_write = $code;
 $code_write =~ s{^(\s*) value \s* \( \s* ([^,]*) , (.*) \);}{ &proc_value_write($2, $3, $1) }exmg;
 $code_write =~ s{structure\( (\w+) \)}{write_$1}xg;
+$code_write =~ s{is_reading}{0}g;
+$code_write =~ s{is_writing}{1}g;
 print $code_write;
 
 sub proc_value_read

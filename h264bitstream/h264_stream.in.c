@@ -1,15 +1,90 @@
+/* 
+ * h264bitstream - a library for reading and writing H.264 video
+ * Copyright (C) 2005-2007 Auroras Entertainment, LLC
+ * Copyright (C) 2008-2011 Avail-TVN
+ * Copyright (C) 2012 Alex Izvorski
+ *
+ * Written by Alex Izvorski <aizvorski@gmail.com> and Alex Giladi <alex.giladi@gmail.com>
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
+
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#include "bs.h"
+#include "h264_stream.h"
+#include "h264_sei.h"
+
+FILE* h264_dbgfile = NULL;
+
+#define printf(...) fprintf((h264_dbgfile == NULL ? stdout : h264_dbgfile), __VA_ARGS__)
+
+/** 
+ Calculate the log base 2 of the argument, rounded up. 
+ Zero or negative arguments return zero 
+ Idea from http://www.southwindsgames.com/blog/2009/01/19/fast-integer-log2-function-in-cc/
+ */
+int intlog2(int x)
+{
+    int log = 0;
+    if (x < 0) { x = 0; }
+    while ((x >> log) > 0)
+    {
+        log++;
+    }
+    if (log > 0 && x == 1<<(log-1)) { log--; }
+    return log;
+}
+
+int is_slice_type(int slice_type, int cmp_type)
+{
+    if (slice_type >= 5) { slice_type -= 5; }
+    if (cmp_type >= 5) { cmp_type -= 5; }
+    if (slice_type == cmp_type) { return 1; }
+    else { return 0; }
+}
+
+int more_rbsp_data(h264_stream_t* h, bs_t* b) 
+{
+    if ( bs_eof(b) ) { return 0; }
+    if ( bs_peek_u1(b) == 1 ) { return 0; } // if next bit is 1, we've reached the stop bit
+    return 1;
+}
+
+int more_rbsp_trailing_data(h264_stream_t* h, bs_t* b) { return !bs_eof(b); }
+
+
+#end_preamble
+
+#function_declarations
+
 //7.3.2.1 Sequence parameter set RBSP syntax
 void structure(seq_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
 {
     int i;
 
-    // select the correct sps
-    // h->sps = h->sps_table[seq_parameter_set_id];
     sps_t* sps = h->sps;
-    memset(sps, 0, sizeof(sps_t));
-    
-    sps->chroma_format_idc = 1; 
-
+    if( is_reading )
+    {
+        memset(sps, 0, sizeof(sps_t));
+        sps->chroma_format_idc = 1; 
+    }
+ 
     value( sps->profile_idc, u8 );
     value( sps->constraint_set0_flag, u1 );
     value( sps->constraint_set1_flag, u1 );
@@ -95,6 +170,11 @@ void structure(seq_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
         structure(vui_parameters)(h, b);
     }
     structure(rbsp_trailing_bits)(h, b);
+
+    if( is_reading )
+    {
+        memcpy(sps, h->sps_table[sps->seq_parameter_set_id], sizeof(sps_t));
+    }
 }
 
 
@@ -234,15 +314,16 @@ int structure(seq_parameter_set_extension_rbsp)(bs_t* b, sps_ext_t* sps_ext) {
 //7.3.2.2 Picture parameter set RBSP syntax
 void structure(pic_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
 {
-    value( int pps_id, ue );
-    pps_t* pps = h->pps = h->pps_table[pps_id] ;
-
-    memset(pps, 0, sizeof(pps_t));
+    pps_t* pps = h->pps;
+    if( is_reading )
+    {
+        memset(pps, 0, sizeof(pps_t));
+    }
 
     int i;
     int i_group;
 
-    pps->pic_parameter_set_id = pps_id;
+    value( pps->pic_parameter_set_id, ue);
     value( pps->seq_parameter_set_id, ue );
     value( pps->entropy_coding_mode_flag, u1 );
     value( pps->pic_order_present_flag, u1 );
@@ -294,6 +375,7 @@ void structure(pic_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
     value( pps->constrained_intra_pred_flag, u1 );
     value( pps->redundant_pic_cnt_present_flag, u1 );
 
+    // TODO read/write diff
     pps->_more_rbsp_data_present = more_rbsp_data(h, b);
     if( pps->_more_rbsp_data_present )
     {
@@ -322,6 +404,11 @@ void structure(pic_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
         value( pps->second_chroma_qp_index_offset, se );
     }
     structure(rbsp_trailing_bits)(h, b);
+
+    if( is_reading )
+    {
+        memcpy(pps, h->pps_table[pps->pic_parameter_set_id], sizeof(pps_t));
+    }
 }
 
 //7.3.2.3 Supplemental enhancement information RBSP syntax
@@ -344,7 +431,7 @@ void structure(sei_rbsp)(h264_stream_t* h, bs_t* b)
     structure(rbsp_trailing_bits)(h, b);
 }
 
-int _structure(ff_coded_number)(bs_t* b)
+int structure(ff_coded_number)(bs_t* b)
 {
     int n1 = 0;
     int n2;
@@ -359,8 +446,8 @@ int _structure(ff_coded_number)(bs_t* b)
 //7.3.2.3.1 Supplemental enhancement information message syntax
 void structure(sei_message)(h264_stream_t* h, bs_t* b)
 {
-    h->sei->payloadType = _structure(ff_coded_number)(b);
-    h->sei->payloadSize = _structure(ff_coded_number)(b);
+    h->sei->payloadType = structure(ff_coded_number)(b);
+    h->sei->payloadSize = structure(ff_coded_number)(b);
     structure(sei_payload)( h, b, h->sei->payloadType, h->sei->payloadSize );
 }
 
@@ -443,9 +530,6 @@ slice_data_partition_c_layer_rbsp( ) {
 }
 */
 
-int
-more_rbsp_trailing_data(h264_stream_t* h, bs_t* b) { return !bs_eof(b); }
-
 //7.3.2.10 RBSP slice trailing bits syntax
 void structure(rbsp_slice_trailing_bits)(h264_stream_t* h, bs_t* b)
 {
@@ -475,18 +559,20 @@ void structure(rbsp_trailing_bits)(h264_stream_t* h, bs_t* b)
 void structure(slice_header)(h264_stream_t* h, bs_t* b)
 {
     slice_header_t* sh = h->sh;
-    memset(sh, 0, sizeof(slice_header_t));
+    if( is_reading )
+    {
+        memset(sh, 0, sizeof(slice_header_t));
+    }
 
-    sps_t* sps = NULL; // h->sps;
-    pps_t* pps = NULL;//h->pps;
     nal_t* nal = h->nal;
 
     value( sh->first_mb_in_slice, ue );
     value( sh->slice_type, ue );
     value( sh->pic_parameter_set_id, ue );
 
-    pps = h->pps = h->pps_table[sh->pic_parameter_set_id];
-    sps = h->sps = h->sps_table[pps->seq_parameter_set_id];
+    // TODO check existence, otherwise fail
+    pps_t* pps = h->pps = h->pps_table[sh->pic_parameter_set_id];
+    sps_t* sps = h->sps = h->sps_table[pps->seq_parameter_set_id];
 
     value( sh->frame_num, u(sps->log2_max_frame_num_minus4 + 4 ) ); // was u(v)
     if( !sps->frame_mbs_only_flag )

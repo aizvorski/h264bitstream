@@ -24,6 +24,8 @@
 #include "h264_stream.h"
 #include "h264_slice_data.h"
 
+#end_preamble
+
 #function_declarations
 
 //7.3.4 Slice data syntax
