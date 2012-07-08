@@ -68,10 +68,129 @@ int more_rbsp_data(h264_stream_t* h, bs_t* b)
 
 int more_rbsp_trailing_data(h264_stream_t* h, bs_t* b) { return !bs_eof(b); }
 
+int _read_ff_coded_number(bs_t* b)
+{
+    int n1 = 0;
+    int n2;
+    do 
+    {
+        n2 = bs_read_u8(b);
+        n1 += n2;
+    } while (n2 == 0xff);
+    return n1;
+}
+
+void _write_ff_coded_number(bs_t* b, int n)
+{
+    while (1)
+    {
+        if (n > 0xff)
+        {
+            bs_write_u8(b, 0xff);
+            n -= 0xff;
+        }
+        else
+        {
+            bs_write_u8(b, n);
+            break;
+        }
+    }
+}
+
 
 #end_preamble
 
 #function_declarations
+
+
+//7.3.1 NAL unit syntax
+int structure(nal_unit)(h264_stream_t* h, uint8_t* buf, int size)
+{
+    nal_t* nal = h->nal;
+
+    int nal_size = size;
+    int rbsp_size = size;
+    uint8_t* rbsp_buf = (uint8_t*)calloc(1, rbsp_size);
+
+    if( is_reading )
+    {
+    int rc = nal_to_rbsp(buf, &nal_size, rbsp_buf, &rbsp_size);
+
+    if (rc < 0) { free(rbsp_buf); return -1; } // handle conversion error
+    }
+
+    if( is_writing )
+    {
+    rbsp_size = size*3/4; // NOTE this may have to be slightly smaller (3/4 smaller, worst case) in order to be guaranteed to fit
+    }
+
+    bs_t* b = bs_new(rbsp_buf, rbsp_size);
+    value( forbidden_zero_bit, f(1, 0) );
+    value( nal->nal_ref_idc, u(2) );
+    value( nal->nal_unit_type, u(5) );
+
+    switch ( nal->nal_unit_type )
+    {
+        case NAL_UNIT_TYPE_CODED_SLICE_IDR:
+        case NAL_UNIT_TYPE_CODED_SLICE_NON_IDR:  
+        case NAL_UNIT_TYPE_CODED_SLICE_AUX:
+            structure(slice_layer_rbsp)(h, b);
+            break;
+
+#ifdef HAVE_SEI
+        case NAL_UNIT_TYPE_SEI:
+            structure(sei_rbsp)(h, b);
+            break;
+#endif
+
+        case NAL_UNIT_TYPE_SPS: 
+            structure(seq_parameter_set_rbsp)(h, b); 
+            break;
+
+        case NAL_UNIT_TYPE_PPS:   
+            structure(pic_parameter_set_rbsp)(h, b);
+            break;
+
+        case NAL_UNIT_TYPE_AUD:     
+            structure(access_unit_delimiter_rbsp)(h, b); 
+            break;
+
+        case NAL_UNIT_TYPE_END_OF_SEQUENCE: 
+            structure(end_of_seq_rbsp)(h, b);
+            break;
+
+        case NAL_UNIT_TYPE_END_OF_STREAM: 
+            structure(end_of_stream_rbsp)(h, b);
+            break;
+
+        case NAL_UNIT_TYPE_FILLER:
+        case NAL_UNIT_TYPE_SPS_EXT:
+        case NAL_UNIT_TYPE_UNSPECIFIED:
+        case NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_A:  
+        case NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_B: 
+        case NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_C:
+        default:
+            return -1;
+    }
+
+    if (bs_overrun(b)) { bs_free(b); free(rbsp_buf); return -1; }
+
+    if( is_writing )
+    {
+    // now get the actual size used
+    rbsp_size = bs_pos(b);
+
+    int rc = rbsp_to_nal(rbsp_buf, &rbsp_size, buf, &nal_size);
+    if (rc < 0) { bs_free(b); free(rbsp_buf); return -1; }
+    }
+
+    bs_free(b);
+    free(rbsp_buf);
+
+    return nal_size;
+}
+
+
 
 //7.3.2.1 Sequence parameter set RBSP syntax
 void structure(seq_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
@@ -118,12 +237,12 @@ void structure(seq_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
                     if( i < 6 )
                     {
                         structure(scaling_list)( b, sps->ScalingList4x4[ i ], 16,
-                                      sps->UseDefaultScalingMatrix4x4Flag[ i ]);
+                                                 &( sps->UseDefaultScalingMatrix4x4Flag[ i ] ) );
                     }
                     else
                     {
                         structure(scaling_list)( b, sps->ScalingList8x8[ i - 6 ], 64,
-                                      sps->UseDefaultScalingMatrix8x8Flag[ i - 6 ] );
+                                                 &( sps->UseDefaultScalingMatrix8x8Flag[ i - 6 ] ) );
                     }
                 }
             }
@@ -179,20 +298,35 @@ void structure(seq_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
 
 
 //7.3.2.1.1 Scaling list syntax
-void structure(scaling_list)(bs_t* b, int* scalingList, int sizeOfScalingList, int useDefaultScalingMatrixFlag )
+void structure(scaling_list)(bs_t* b, int* scalingList, int sizeOfScalingList, int* useDefaultScalingMatrixFlag )
 {
+    // NOTE need to be able to set useDefaultScalingMatrixFlag when reading, hence passing as pointer
     int lastScale = 8;
     int nextScale = 8;
+    int delta_scale;
     for( int j = 0; j < sizeOfScalingList; j++ )
     {
         if( nextScale != 0 )
         {
-            int delta_scale;
+            if( is_writing )
+            {
+                nextScale = scalingList[ j ];
+                if (useDefaultScalingMatrixFlag[0]) { nextScale = 0; }
+                delta_scale = (nextScale - lastScale) % 256 ;
+            }
+
             value( delta_scale, se );
-            nextScale = ( lastScale + delta_scale + 256 ) % 256;
-            useDefaultScalingMatrixFlag = ( j == 0 && nextScale == 0 );
+
+            if( is_reading )
+            {
+                nextScale = ( lastScale + delta_scale + 256 ) % 256;
+                useDefaultScalingMatrixFlag[0] = ( j == 0 && nextScale == 0 );
+            }
         }
-        scalingList[ j ] = ( nextScale == 0 ) ? lastScale : nextScale;
+        if( is_reading )
+        {
+            scalingList[ j ] = ( nextScale == 0 ) ? lastScale : nextScale;
+        }
         lastScale = scalingList[ j ];
     }
 }
@@ -276,12 +410,11 @@ void structure(vui_parameters)(h264_stream_t* h, bs_t* b)
 void structure(hrd_parameters)(h264_stream_t* h, bs_t* b)
 {
     sps_t* sps = h->sps;
-    int SchedSelIdx;
 
     value( sps->hrd.cpb_cnt_minus1, ue );
     value( sps->hrd.bit_rate_scale, u(4) );
     value( sps->hrd.cpb_size_scale, u(4) );
-    for( SchedSelIdx = 0; SchedSelIdx <= sps->hrd.cpb_cnt_minus1; SchedSelIdx++ )
+    for( int SchedSelIdx = 0; SchedSelIdx <= sps->hrd.cpb_cnt_minus1; SchedSelIdx++ )
     {
         value( sps->hrd.bit_rate_value_minus1[ SchedSelIdx ], ue );
         value( sps->hrd.cpb_size_value_minus1[ SchedSelIdx ], ue );
@@ -320,9 +453,6 @@ void structure(pic_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
         memset(pps, 0, sizeof(pps_t));
     }
 
-    int i;
-    int i_group;
-
     value( pps->pic_parameter_set_id, ue);
     value( pps->seq_parameter_set_id, ue );
     value( pps->entropy_coding_mode_flag, u1 );
@@ -334,14 +464,14 @@ void structure(pic_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
         value( pps->slice_group_map_type, ue );
         if( pps->slice_group_map_type == 0 )
         {
-            for( i_group = 0; i_group <= pps->num_slice_groups_minus1; i_group++ )
+            for( int i_group = 0; i_group <= pps->num_slice_groups_minus1; i_group++ )
             {
                 value( pps->run_length_minus1[ i_group ], ue );
             }
         }
         else if( pps->slice_group_map_type == 2 )
         {
-            for( i_group = 0; i_group < pps->num_slice_groups_minus1; i_group++ )
+            for( int i_group = 0; i_group < pps->num_slice_groups_minus1; i_group++ )
             {
                 value( pps->top_left[ i_group ], ue );
                 value( pps->bottom_right[ i_group ], ue );
@@ -357,7 +487,7 @@ void structure(pic_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
         else if( pps->slice_group_map_type == 6 )
         {
             value( pps->pic_size_in_map_units_minus1, ue );
-            for( i = 0; i <= pps->pic_size_in_map_units_minus1; i++ )
+            for( int i = 0; i <= pps->pic_size_in_map_units_minus1; i++ )
             {
                 int v = intlog2( pps->num_slice_groups_minus1 + 1 );
                 value( pps->slice_group_id[ i ], u(v) );
@@ -375,15 +505,20 @@ void structure(pic_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
     value( pps->constrained_intra_pred_flag, u1 );
     value( pps->redundant_pic_cnt_present_flag, u1 );
 
-    // TODO read/write diff
-    pps->_more_rbsp_data_present = more_rbsp_data(h, b);
-    if( pps->_more_rbsp_data_present )
+    int have_more_data = 0;
+    if( is_reading ) { have_more_data = more_rbsp_data(h, b); }
+    if( is_writing )
+    {
+        have_more_data = pps->transform_8x8_mode_flag | pps->pic_scaling_matrix_present_flag | pps->second_chroma_qp_index_offset != 0;
+    }
+
+    if( have_more_data )
     {
         value( pps->transform_8x8_mode_flag, u1 );
         value( pps->pic_scaling_matrix_present_flag, u1 );
         if( pps->pic_scaling_matrix_present_flag )
         {
-            for( i = 0; i < 6 + 2* pps->transform_8x8_mode_flag; i++ )
+            for( int i = 0; i < 6 + 2* pps->transform_8x8_mode_flag; i++ )
             {
                 value( pps->pic_scaling_list_present_flag[ i ], u1 );
                 if( pps->pic_scaling_list_present_flag[ i ] )
@@ -391,12 +526,12 @@ void structure(pic_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
                     if( i < 6 )
                     {
                         structure(scaling_list)( b, pps->ScalingList4x4[ i ], 16,
-                                      pps->UseDefaultScalingMatrix4x4Flag[ i ] );
+                                                 &( pps->UseDefaultScalingMatrix4x4Flag[ i ] ) );
                     }
                     else
                     {
                         structure(scaling_list)( b, pps->ScalingList8x8[ i - 6 ], 64,
-                                      pps->UseDefaultScalingMatrix8x8Flag[ i - 6 ] );
+                                                 &( pps->UseDefaultScalingMatrix8x8Flag[ i - 6 ] ) );
                     }
                 }
             }
@@ -411,11 +546,13 @@ void structure(pic_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
     }
 }
 
+#ifdef HAVE_SEI
 //7.3.2.3 Supplemental enhancement information RBSP syntax
 void structure(sei_rbsp)(h264_stream_t* h, bs_t* b)
 {
-    int i;
-    for (i = 0; i < h->num_seis; i++)
+    if( is_reading )
+    {
+    for( int i = 0; i < h->num_seis; i++ )
     {
         sei_free(h->seis[i]);
     }
@@ -428,28 +565,38 @@ void structure(sei_rbsp)(h264_stream_t* h, bs_t* b)
         h->sei = h->seis[h->num_seis - 1];
         structure(sei_message)(h, b);
     } while( more_rbsp_data(h, b) );
-    structure(rbsp_trailing_bits)(h, b);
-}
 
-int structure(ff_coded_number)(bs_t* b)
-{
-    int n1 = 0;
-    int n2;
-    do 
+    }
+
+    if( is_writing )
     {
-        value( n2, u8 );
-        n1 += n2;
-    } while (n2 == 0xff);
-    return n1;
+    for (int i = 0; i < h->num_seis; i++)
+    {
+        h->sei = h->seis[i];
+        structure(sei_message)(h, b);
+    }
+    h->sei = NULL;
+    }
+
+    structure(rbsp_trailing_bits)(h, b);
 }
 
 //7.3.2.3.1 Supplemental enhancement information message syntax
 void structure(sei_message)(h264_stream_t* h, bs_t* b)
 {
-    h->sei->payloadType = structure(ff_coded_number)(b);
-    h->sei->payloadSize = structure(ff_coded_number)(b);
+    if( is_writing )
+    {
+        _write_ff_coded_number(b, h->sei->payloadType);
+        _write_ff_coded_number(b, h->sei->payloadSize);
+    }
+    if( is_reading )
+    {
+        h->sei->payloadType = _read_ff_coded_number(b);
+        h->sei->payloadSize = _read_ff_coded_number(b);
+    }
     structure(sei_payload)( h, b, h->sei->payloadType, h->sei->payloadSize );
 }
+#endif
 
 //7.3.2.4 Access unit delimiter RBSP syntax
 void structure(access_unit_delimiter_rbsp)(h264_stream_t* h, bs_t* b)
