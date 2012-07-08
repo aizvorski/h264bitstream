@@ -24,8 +24,7 @@
 #include "h264_stream.h"
 #include "h264_slice_data.h"
 
-/****** reading ******/
-
+#function_declarations
 
 //7.3.4 Slice data syntax
 void structure(slice_data)( h264_stream_t* h, bs_t* b )
