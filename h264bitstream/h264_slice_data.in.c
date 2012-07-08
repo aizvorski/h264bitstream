@@ -21,6 +21,10 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
+
 #include "h264_stream.h"
 #include "h264_slice_data.h"
 
@@ -36,7 +40,7 @@ void structure(slice_data)( h264_stream_t* h, bs_t* b )
     {
         while( !bs_byte_aligned(b) )
         {
-            value( cabac_alignment_one_bit, f(1) );
+            value( cabac_alignment_one_bit, f(1, 1) );
         }
     }
     int CurrMbAddr = h->sh->first_mb_in_slice * ( 1 + MbaffFrameFlag );
