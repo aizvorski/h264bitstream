@@ -97,6 +97,16 @@ void _write_ff_coded_number(bs_t* b, int n)
     }
 }
 
+void debug_bytes(uint8_t* buf, int len)
+{
+    int i;
+    for (i = 0; i < len; i++)
+    {
+        printf("%02X ", buf[i]);
+        if ((i+1) % 16 == 0) { printf ("\n"); }
+    }
+    printf("\n");
+}
 
 #end_preamble
 
@@ -822,19 +832,21 @@ void structure(ref_pic_list_reordering)(h264_stream_t* h, bs_t* b)
         value( sh->rplr.ref_pic_list_reordering_flag_l0, u1 );
         if( sh->rplr.ref_pic_list_reordering_flag_l0 )
         {
+            int n = -1;
             do
             {
-                value( sh->rplr.reordering_of_pic_nums_idc, ue );
-                if( sh->rplr.reordering_of_pic_nums_idc == 0 ||
-                    sh->rplr.reordering_of_pic_nums_idc == 1 )
+                n++;
+                value( sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ], ue );
+                if( sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] == 0 ||
+                    sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] == 1 )
                 {
-                    value( sh->rplr.abs_diff_pic_num_minus1, ue );
+                    value( sh->rplr.reorder_l0.abs_diff_pic_num_minus1[ n ], ue );
                 }
-                else if( sh->rplr.reordering_of_pic_nums_idc == 2 )
+                else if( sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] == 2 )
                 {
-                    value( sh->rplr.long_term_pic_num, ue );
+                    value( sh->rplr.reorder_l0.long_term_pic_num[ n ], ue );
                 }
-            } while( sh->rplr.reordering_of_pic_nums_idc != 3 && ! bs_eof(b) );
+            } while( sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] != 3 && ! bs_eof(b) );
         }
     }
     if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
@@ -842,19 +854,21 @@ void structure(ref_pic_list_reordering)(h264_stream_t* h, bs_t* b)
         value( sh->rplr.ref_pic_list_reordering_flag_l1, u1 );
         if( sh->rplr.ref_pic_list_reordering_flag_l1 )
         {
+            int n = -1;
             do
             {
-                value( sh->rplr.reordering_of_pic_nums_idc, ue );
-                if( sh->rplr.reordering_of_pic_nums_idc == 0 ||
-                    sh->rplr.reordering_of_pic_nums_idc == 1 )
+                n++;
+                value( sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ], ue );
+                if( sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] == 0 ||
+                    sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] == 1 )
                 {
-                    value( sh->rplr.abs_diff_pic_num_minus1, ue );
+                    value( sh->rplr.reorder_l1.abs_diff_pic_num_minus1[ n ], ue );
                 }
-                else if( sh->rplr.reordering_of_pic_nums_idc == 2 )
+                else if( sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] == 2 )
                 {
-                    value( sh->rplr.long_term_pic_num, ue );
+                    value( sh->rplr.reorder_l1.long_term_pic_num[ n ], ue );
                 }
-            } while( sh->rplr.reordering_of_pic_nums_idc != 3 && ! bs_eof(b) );
+            } while( sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] != 3 && ! bs_eof(b) );
         }
     }
 }
@@ -936,28 +950,30 @@ void structure(dec_ref_pic_marking)(h264_stream_t* h, bs_t* b)
         value( sh->drpm.adaptive_ref_pic_marking_mode_flag, u1 );
         if( sh->drpm.adaptive_ref_pic_marking_mode_flag )
         {
+            int n = -1;
             do
             {
-                value( sh->drpm.memory_management_control_operation, ue );
-                if( sh->drpm.memory_management_control_operation == 1 ||
-                    sh->drpm.memory_management_control_operation == 3 )
+                n++;
+                value( sh->drpm.memory_management_control_operation[ n ], ue );
+                if( sh->drpm.memory_management_control_operation[ n ] == 1 ||
+                    sh->drpm.memory_management_control_operation[ n ] == 3 )
                 {
-                    value( sh->drpm.difference_of_pic_nums_minus1, ue );
+                    value( sh->drpm.difference_of_pic_nums_minus1[ n ], ue );
                 }
-                if(sh->drpm.memory_management_control_operation == 2 )
+                if(sh->drpm.memory_management_control_operation[ n ] == 2 )
                 {
-                    value( sh->drpm.long_term_pic_num, ue );
+                    value( sh->drpm.long_term_pic_num[ n ], ue );
                 }
-                if( sh->drpm.memory_management_control_operation == 3 ||
-                    sh->drpm.memory_management_control_operation == 6 )
+                if( sh->drpm.memory_management_control_operation[ n ] == 3 ||
+                    sh->drpm.memory_management_control_operation[ n ] == 6 )
                 {
-                    value( sh->drpm.long_term_frame_idx, ue );
+                    value( sh->drpm.long_term_frame_idx[ n ], ue );
                 }
-                if( sh->drpm.memory_management_control_operation == 4 )
+                if( sh->drpm.memory_management_control_operation[ n ] == 4 )
                 {
-                    value( sh->drpm.max_long_term_frame_idx_plus1, ue );
+                    value( sh->drpm.max_long_term_frame_idx_plus1[ n ], ue );
                 }
-            } while( sh->drpm.memory_management_control_operation != 0 && ! bs_eof(b) );
+            } while( sh->drpm.memory_management_control_operation[ n ] != 0 && ! bs_eof(b) );
         }
     }
 }

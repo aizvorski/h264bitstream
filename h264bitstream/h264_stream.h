@@ -238,25 +238,36 @@ typedef struct
         int chroma_offset_l1[64][2];
     } pwt; // predictive weight table
 
-    struct // FIXME stack or array
+    // TODO check max index
+    // TODO array of structs instead of struct of arrays
+    struct
     {
         int ref_pic_list_reordering_flag_l0;
+        struct
+        {
+            int reordering_of_pic_nums_idc[64];
+            int abs_diff_pic_num_minus1[64];
+            int long_term_pic_num[64];
+        } reorder_l0;
         int ref_pic_list_reordering_flag_l1;
-        int reordering_of_pic_nums_idc;
-        int abs_diff_pic_num_minus1;
-        int long_term_pic_num;
+        struct
+        {
+            int reordering_of_pic_nums_idc[64];
+            int abs_diff_pic_num_minus1[64];
+            int long_term_pic_num[64];
+        } reorder_l1;
     } rplr; // ref pic list reorder
 
-    struct // FIXME stack or array
+    struct
     {
         int no_output_of_prior_pics_flag;
         int long_term_reference_flag;
         int adaptive_ref_pic_marking_mode_flag;
-        int memory_management_control_operation;
-        int difference_of_pic_nums_minus1;
-        int long_term_pic_num;
-        int long_term_frame_idx;
-        int max_long_term_frame_idx_plus1;
+        int memory_management_control_operation[64];
+        int difference_of_pic_nums_minus1[64];
+        int long_term_pic_num[64];
+        int long_term_frame_idx[64];
+        int max_long_term_frame_idx_plus1[64];
     } drpm; // decoded ref pic marking
 
 } slice_header_t;

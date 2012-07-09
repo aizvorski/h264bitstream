@@ -97,6 +97,16 @@ void _write_ff_coded_number(bs_t* b, int n)
     }
 }
 
+void debug_bytes(uint8_t* buf, int len)
+{
+    int i;
+    for (i = 0; i < len; i++)
+    {
+        printf("%02X ", buf[i]);
+        if ((i+1) % 16 == 0) { printf ("\n"); }
+    }
+    printf("\n");
+}
 
 
 
@@ -840,19 +850,21 @@ void read_ref_pic_list_reordering(h264_stream_t* h, bs_t* b)
         sh->rplr.ref_pic_list_reordering_flag_l0 = bs_read_u1(b);
         if( sh->rplr.ref_pic_list_reordering_flag_l0 )
         {
+            int n = -1;
             do
             {
-                sh->rplr.reordering_of_pic_nums_idc = bs_read_ue(b);
-                if( sh->rplr.reordering_of_pic_nums_idc == 0 ||
-                    sh->rplr.reordering_of_pic_nums_idc == 1 )
+                n++;
+                sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] = bs_read_ue(b);
+                if( sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] == 0 ||
+                    sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] == 1 )
                 {
-                    sh->rplr.abs_diff_pic_num_minus1 = bs_read_ue(b);
+                    sh->rplr.reorder_l0.abs_diff_pic_num_minus1[ n ] = bs_read_ue(b);
                 }
-                else if( sh->rplr.reordering_of_pic_nums_idc == 2 )
+                else if( sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] == 2 )
                 {
-                    sh->rplr.long_term_pic_num = bs_read_ue(b);
+                    sh->rplr.reorder_l0.long_term_pic_num[ n ] = bs_read_ue(b);
                 }
-            } while( sh->rplr.reordering_of_pic_nums_idc != 3 && ! bs_eof(b) );
+            } while( sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] != 3 && ! bs_eof(b) );
         }
     }
     if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
@@ -860,19 +872,21 @@ void read_ref_pic_list_reordering(h264_stream_t* h, bs_t* b)
         sh->rplr.ref_pic_list_reordering_flag_l1 = bs_read_u1(b);
         if( sh->rplr.ref_pic_list_reordering_flag_l1 )
         {
+            int n = -1;
             do
             {
-                sh->rplr.reordering_of_pic_nums_idc = bs_read_ue(b);
-                if( sh->rplr.reordering_of_pic_nums_idc == 0 ||
-                    sh->rplr.reordering_of_pic_nums_idc == 1 )
+                n++;
+                sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] = bs_read_ue(b);
+                if( sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] == 0 ||
+                    sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] == 1 )
                 {
-                    sh->rplr.abs_diff_pic_num_minus1 = bs_read_ue(b);
+                    sh->rplr.reorder_l1.abs_diff_pic_num_minus1[ n ] = bs_read_ue(b);
                 }
-                else if( sh->rplr.reordering_of_pic_nums_idc == 2 )
+                else if( sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] == 2 )
                 {
-                    sh->rplr.long_term_pic_num = bs_read_ue(b);
+                    sh->rplr.reorder_l1.long_term_pic_num[ n ] = bs_read_ue(b);
                 }
-            } while( sh->rplr.reordering_of_pic_nums_idc != 3 && ! bs_eof(b) );
+            } while( sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] != 3 && ! bs_eof(b) );
         }
     }
 }
@@ -954,28 +968,30 @@ void read_dec_ref_pic_marking(h264_stream_t* h, bs_t* b)
         sh->drpm.adaptive_ref_pic_marking_mode_flag = bs_read_u1(b);
         if( sh->drpm.adaptive_ref_pic_marking_mode_flag )
         {
+            int n = -1;
             do
             {
-                sh->drpm.memory_management_control_operation = bs_read_ue(b);
-                if( sh->drpm.memory_management_control_operation == 1 ||
-                    sh->drpm.memory_management_control_operation == 3 )
+                n++;
+                sh->drpm.memory_management_control_operation[ n ] = bs_read_ue(b);
+                if( sh->drpm.memory_management_control_operation[ n ] == 1 ||
+                    sh->drpm.memory_management_control_operation[ n ] == 3 )
                 {
-                    sh->drpm.difference_of_pic_nums_minus1 = bs_read_ue(b);
+                    sh->drpm.difference_of_pic_nums_minus1[ n ] = bs_read_ue(b);
                 }
-                if(sh->drpm.memory_management_control_operation == 2 )
+                if(sh->drpm.memory_management_control_operation[ n ] == 2 )
                 {
-                    sh->drpm.long_term_pic_num = bs_read_ue(b);
+                    sh->drpm.long_term_pic_num[ n ] = bs_read_ue(b);
                 }
-                if( sh->drpm.memory_management_control_operation == 3 ||
-                    sh->drpm.memory_management_control_operation == 6 )
+                if( sh->drpm.memory_management_control_operation[ n ] == 3 ||
+                    sh->drpm.memory_management_control_operation[ n ] == 6 )
                 {
-                    sh->drpm.long_term_frame_idx = bs_read_ue(b);
+                    sh->drpm.long_term_frame_idx[ n ] = bs_read_ue(b);
                 }
-                if( sh->drpm.memory_management_control_operation == 4 )
+                if( sh->drpm.memory_management_control_operation[ n ] == 4 )
                 {
-                    sh->drpm.max_long_term_frame_idx_plus1 = bs_read_ue(b);
+                    sh->drpm.max_long_term_frame_idx_plus1[ n ] = bs_read_ue(b);
                 }
-            } while( sh->drpm.memory_management_control_operation != 0 && ! bs_eof(b) );
+            } while( sh->drpm.memory_management_control_operation[ n ] != 0 && ! bs_eof(b) );
         }
     }
 }
@@ -1721,19 +1737,21 @@ void write_ref_pic_list_reordering(h264_stream_t* h, bs_t* b)
         bs_write_u1(b, sh->rplr.ref_pic_list_reordering_flag_l0);
         if( sh->rplr.ref_pic_list_reordering_flag_l0 )
         {
+            int n = -1;
             do
             {
-                bs_write_ue(b, sh->rplr.reordering_of_pic_nums_idc);
-                if( sh->rplr.reordering_of_pic_nums_idc == 0 ||
-                    sh->rplr.reordering_of_pic_nums_idc == 1 )
+                n++;
+                bs_write_ue(b, sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ]);
+                if( sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] == 0 ||
+                    sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] == 1 )
                 {
-                    bs_write_ue(b, sh->rplr.abs_diff_pic_num_minus1);
+                    bs_write_ue(b, sh->rplr.reorder_l0.abs_diff_pic_num_minus1[ n ]);
                 }
-                else if( sh->rplr.reordering_of_pic_nums_idc == 2 )
+                else if( sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] == 2 )
                 {
-                    bs_write_ue(b, sh->rplr.long_term_pic_num);
+                    bs_write_ue(b, sh->rplr.reorder_l0.long_term_pic_num[ n ]);
                 }
-            } while( sh->rplr.reordering_of_pic_nums_idc != 3 && ! bs_eof(b) );
+            } while( sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] != 3 && ! bs_eof(b) );
         }
     }
     if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
@@ -1741,19 +1759,21 @@ void write_ref_pic_list_reordering(h264_stream_t* h, bs_t* b)
         bs_write_u1(b, sh->rplr.ref_pic_list_reordering_flag_l1);
         if( sh->rplr.ref_pic_list_reordering_flag_l1 )
         {
+            int n = -1;
             do
             {
-                bs_write_ue(b, sh->rplr.reordering_of_pic_nums_idc);
-                if( sh->rplr.reordering_of_pic_nums_idc == 0 ||
-                    sh->rplr.reordering_of_pic_nums_idc == 1 )
+                n++;
+                bs_write_ue(b, sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ]);
+                if( sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] == 0 ||
+                    sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] == 1 )
                 {
-                    bs_write_ue(b, sh->rplr.abs_diff_pic_num_minus1);
+                    bs_write_ue(b, sh->rplr.reorder_l1.abs_diff_pic_num_minus1[ n ]);
                 }
-                else if( sh->rplr.reordering_of_pic_nums_idc == 2 )
+                else if( sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] == 2 )
                 {
-                    bs_write_ue(b, sh->rplr.long_term_pic_num);
+                    bs_write_ue(b, sh->rplr.reorder_l1.long_term_pic_num[ n ]);
                 }
-            } while( sh->rplr.reordering_of_pic_nums_idc != 3 && ! bs_eof(b) );
+            } while( sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] != 3 && ! bs_eof(b) );
         }
     }
 }
@@ -1835,28 +1855,30 @@ void write_dec_ref_pic_marking(h264_stream_t* h, bs_t* b)
         bs_write_u1(b, sh->drpm.adaptive_ref_pic_marking_mode_flag);
         if( sh->drpm.adaptive_ref_pic_marking_mode_flag )
         {
+            int n = -1;
             do
             {
-                bs_write_ue(b, sh->drpm.memory_management_control_operation);
-                if( sh->drpm.memory_management_control_operation == 1 ||
-                    sh->drpm.memory_management_control_operation == 3 )
+                n++;
+                bs_write_ue(b, sh->drpm.memory_management_control_operation[ n ]);
+                if( sh->drpm.memory_management_control_operation[ n ] == 1 ||
+                    sh->drpm.memory_management_control_operation[ n ] == 3 )
                 {
-                    bs_write_ue(b, sh->drpm.difference_of_pic_nums_minus1);
+                    bs_write_ue(b, sh->drpm.difference_of_pic_nums_minus1[ n ]);
                 }
-                if(sh->drpm.memory_management_control_operation == 2 )
+                if(sh->drpm.memory_management_control_operation[ n ] == 2 )
                 {
-                    bs_write_ue(b, sh->drpm.long_term_pic_num);
+                    bs_write_ue(b, sh->drpm.long_term_pic_num[ n ]);
                 }
-                if( sh->drpm.memory_management_control_operation == 3 ||
-                    sh->drpm.memory_management_control_operation == 6 )
+                if( sh->drpm.memory_management_control_operation[ n ] == 3 ||
+                    sh->drpm.memory_management_control_operation[ n ] == 6 )
                 {
-                    bs_write_ue(b, sh->drpm.long_term_frame_idx);
+                    bs_write_ue(b, sh->drpm.long_term_frame_idx[ n ]);
                 }
-                if( sh->drpm.memory_management_control_operation == 4 )
+                if( sh->drpm.memory_management_control_operation[ n ] == 4 )
                 {
-                    bs_write_ue(b, sh->drpm.max_long_term_frame_idx_plus1);
+                    bs_write_ue(b, sh->drpm.max_long_term_frame_idx_plus1[ n ]);
                 }
-            } while( sh->drpm.memory_management_control_operation != 0 && ! bs_eof(b) );
+            } while( sh->drpm.memory_management_control_operation[ n ] != 0 && ! bs_eof(b) );
         }
     }
 }
@@ -2602,19 +2624,21 @@ void read_debug_ref_pic_list_reordering(h264_stream_t* h, bs_t* b)
         printf("%d.%d: ", b->p - b->start, b->bits_left); sh->rplr.ref_pic_list_reordering_flag_l0 = bs_read_u1(b); printf("sh->rplr.ref_pic_list_reordering_flag_l0: %d \n", sh->rplr.ref_pic_list_reordering_flag_l0); 
         if( sh->rplr.ref_pic_list_reordering_flag_l0 )
         {
+            int n = -1;
             do
             {
-                printf("%d.%d: ", b->p - b->start, b->bits_left); sh->rplr.reordering_of_pic_nums_idc = bs_read_ue(b); printf("sh->rplr.reordering_of_pic_nums_idc: %d \n", sh->rplr.reordering_of_pic_nums_idc); 
-                if( sh->rplr.reordering_of_pic_nums_idc == 0 ||
-                    sh->rplr.reordering_of_pic_nums_idc == 1 )
+                n++;
+                printf("%d.%d: ", b->p - b->start, b->bits_left); sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] = bs_read_ue(b); printf("sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ]: %d \n", sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ]); 
+                if( sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] == 0 ||
+                    sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] == 1 )
                 {
-                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->rplr.abs_diff_pic_num_minus1 = bs_read_ue(b); printf("sh->rplr.abs_diff_pic_num_minus1: %d \n", sh->rplr.abs_diff_pic_num_minus1); 
+                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->rplr.reorder_l0.abs_diff_pic_num_minus1[ n ] = bs_read_ue(b); printf("sh->rplr.reorder_l0.abs_diff_pic_num_minus1[ n ]: %d \n", sh->rplr.reorder_l0.abs_diff_pic_num_minus1[ n ]); 
                 }
-                else if( sh->rplr.reordering_of_pic_nums_idc == 2 )
+                else if( sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] == 2 )
                 {
-                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->rplr.long_term_pic_num = bs_read_ue(b); printf("sh->rplr.long_term_pic_num: %d \n", sh->rplr.long_term_pic_num); 
+                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->rplr.reorder_l0.long_term_pic_num[ n ] = bs_read_ue(b); printf("sh->rplr.reorder_l0.long_term_pic_num[ n ]: %d \n", sh->rplr.reorder_l0.long_term_pic_num[ n ]); 
                 }
-            } while( sh->rplr.reordering_of_pic_nums_idc != 3 && ! bs_eof(b) );
+            } while( sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ] != 3 && ! bs_eof(b) );
         }
     }
     if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
@@ -2622,19 +2646,21 @@ void read_debug_ref_pic_list_reordering(h264_stream_t* h, bs_t* b)
         printf("%d.%d: ", b->p - b->start, b->bits_left); sh->rplr.ref_pic_list_reordering_flag_l1 = bs_read_u1(b); printf("sh->rplr.ref_pic_list_reordering_flag_l1: %d \n", sh->rplr.ref_pic_list_reordering_flag_l1); 
         if( sh->rplr.ref_pic_list_reordering_flag_l1 )
         {
+            int n = -1;
             do
             {
-                printf("%d.%d: ", b->p - b->start, b->bits_left); sh->rplr.reordering_of_pic_nums_idc = bs_read_ue(b); printf("sh->rplr.reordering_of_pic_nums_idc: %d \n", sh->rplr.reordering_of_pic_nums_idc); 
-                if( sh->rplr.reordering_of_pic_nums_idc == 0 ||
-                    sh->rplr.reordering_of_pic_nums_idc == 1 )
+                n++;
+                printf("%d.%d: ", b->p - b->start, b->bits_left); sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] = bs_read_ue(b); printf("sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ]: %d \n", sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ]); 
+                if( sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] == 0 ||
+                    sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] == 1 )
                 {
-                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->rplr.abs_diff_pic_num_minus1 = bs_read_ue(b); printf("sh->rplr.abs_diff_pic_num_minus1: %d \n", sh->rplr.abs_diff_pic_num_minus1); 
+                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->rplr.reorder_l1.abs_diff_pic_num_minus1[ n ] = bs_read_ue(b); printf("sh->rplr.reorder_l1.abs_diff_pic_num_minus1[ n ]: %d \n", sh->rplr.reorder_l1.abs_diff_pic_num_minus1[ n ]); 
                 }
-                else if( sh->rplr.reordering_of_pic_nums_idc == 2 )
+                else if( sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] == 2 )
                 {
-                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->rplr.long_term_pic_num = bs_read_ue(b); printf("sh->rplr.long_term_pic_num: %d \n", sh->rplr.long_term_pic_num); 
+                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->rplr.reorder_l1.long_term_pic_num[ n ] = bs_read_ue(b); printf("sh->rplr.reorder_l1.long_term_pic_num[ n ]: %d \n", sh->rplr.reorder_l1.long_term_pic_num[ n ]); 
                 }
-            } while( sh->rplr.reordering_of_pic_nums_idc != 3 && ! bs_eof(b) );
+            } while( sh->rplr.reorder_l1.reordering_of_pic_nums_idc[ n ] != 3 && ! bs_eof(b) );
         }
     }
 }
@@ -2716,28 +2742,30 @@ void read_debug_dec_ref_pic_marking(h264_stream_t* h, bs_t* b)
         printf("%d.%d: ", b->p - b->start, b->bits_left); sh->drpm.adaptive_ref_pic_marking_mode_flag = bs_read_u1(b); printf("sh->drpm.adaptive_ref_pic_marking_mode_flag: %d \n", sh->drpm.adaptive_ref_pic_marking_mode_flag); 
         if( sh->drpm.adaptive_ref_pic_marking_mode_flag )
         {
+            int n = -1;
             do
             {
-                printf("%d.%d: ", b->p - b->start, b->bits_left); sh->drpm.memory_management_control_operation = bs_read_ue(b); printf("sh->drpm.memory_management_control_operation: %d \n", sh->drpm.memory_management_control_operation); 
-                if( sh->drpm.memory_management_control_operation == 1 ||
-                    sh->drpm.memory_management_control_operation == 3 )
+                n++;
+                printf("%d.%d: ", b->p - b->start, b->bits_left); sh->drpm.memory_management_control_operation[ n ] = bs_read_ue(b); printf("sh->drpm.memory_management_control_operation[ n ]: %d \n", sh->drpm.memory_management_control_operation[ n ]); 
+                if( sh->drpm.memory_management_control_operation[ n ] == 1 ||
+                    sh->drpm.memory_management_control_operation[ n ] == 3 )
                 {
-                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->drpm.difference_of_pic_nums_minus1 = bs_read_ue(b); printf("sh->drpm.difference_of_pic_nums_minus1: %d \n", sh->drpm.difference_of_pic_nums_minus1); 
+                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->drpm.difference_of_pic_nums_minus1[ n ] = bs_read_ue(b); printf("sh->drpm.difference_of_pic_nums_minus1[ n ]: %d \n", sh->drpm.difference_of_pic_nums_minus1[ n ]); 
                 }
-                if(sh->drpm.memory_management_control_operation == 2 )
+                if(sh->drpm.memory_management_control_operation[ n ] == 2 )
                 {
-                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->drpm.long_term_pic_num = bs_read_ue(b); printf("sh->drpm.long_term_pic_num: %d \n", sh->drpm.long_term_pic_num); 
+                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->drpm.long_term_pic_num[ n ] = bs_read_ue(b); printf("sh->drpm.long_term_pic_num[ n ]: %d \n", sh->drpm.long_term_pic_num[ n ]); 
                 }
-                if( sh->drpm.memory_management_control_operation == 3 ||
-                    sh->drpm.memory_management_control_operation == 6 )
+                if( sh->drpm.memory_management_control_operation[ n ] == 3 ||
+                    sh->drpm.memory_management_control_operation[ n ] == 6 )
                 {
-                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->drpm.long_term_frame_idx = bs_read_ue(b); printf("sh->drpm.long_term_frame_idx: %d \n", sh->drpm.long_term_frame_idx); 
+                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->drpm.long_term_frame_idx[ n ] = bs_read_ue(b); printf("sh->drpm.long_term_frame_idx[ n ]: %d \n", sh->drpm.long_term_frame_idx[ n ]); 
                 }
-                if( sh->drpm.memory_management_control_operation == 4 )
+                if( sh->drpm.memory_management_control_operation[ n ] == 4 )
                 {
-                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->drpm.max_long_term_frame_idx_plus1 = bs_read_ue(b); printf("sh->drpm.max_long_term_frame_idx_plus1: %d \n", sh->drpm.max_long_term_frame_idx_plus1); 
+                    printf("%d.%d: ", b->p - b->start, b->bits_left); sh->drpm.max_long_term_frame_idx_plus1[ n ] = bs_read_ue(b); printf("sh->drpm.max_long_term_frame_idx_plus1[ n ]: %d \n", sh->drpm.max_long_term_frame_idx_plus1[ n ]); 
                 }
-            } while( sh->drpm.memory_management_control_operation != 0 && ! bs_eof(b) );
+            } while( sh->drpm.memory_management_control_operation[ n ] != 0 && ! bs_eof(b) );
         }
     }
 }
