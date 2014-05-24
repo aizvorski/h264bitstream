@@ -69,7 +69,7 @@ void read_sei_payload(h264_stream_t* h, bs_t* b, int payloadType, int payloadSiz
     for ( i = 0; i < payloadSize; i++ )
         s->payload[i] = bs_read_u(b, 8);
         
-    read_sei_end_bits(h, b);
+    //read_sei_end_bits(h, b);
 }
 
 // D.1 SEI payload syntax
