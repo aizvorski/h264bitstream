@@ -59,11 +59,28 @@ int is_slice_type(int slice_type, int cmp_type)
     else { return 0; }
 }
 
-int more_rbsp_data(h264_stream_t* h, bs_t* b) 
+int more_rbsp_data(h264_stream_t* h, bs_t* bs)
 {
-    if ( bs_eof(b) ) { return 0; }
-    if ( bs_peek_u1(b) == 1 ) { return 0; } // if next bit is 1, we've reached the stop bit
-    return 1;
+    // TODO this version handles reading only. writing version?
+
+    // no more data
+    if (bs_eof(bs)) { return 0; }
+
+    // no rbsp_stop_bit yet
+    if (bs_peek_u1(bs) == 0) { return 1; }
+
+    // next bit is 1, is it the rsbp_stop_bit? only if the rest of bits are 0
+    bs_t bs_tmp;
+    bs_clone(&bs_tmp, bs);
+    bs_skip_u1(&bs_tmp);
+    while(!bs_eof(&bs_tmp))
+    {
+        // A later bit was 1, it wasn't the rsbp_stop_bit
+        if (bs_read_u1(&bs_tmp) == 1) { return 1; }
+    }
+
+    // All following bits were 0, it was the rsbp_stop_bit
+    return 0;
 }
 
 int more_rbsp_trailing_data(h264_stream_t* h, bs_t* b) { return !bs_eof(b); }
