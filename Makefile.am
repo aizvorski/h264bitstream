@@ -9,9 +9,9 @@ bin_PROGRAMS = h264_analyze
 lib_LTLIBRARIES = libh264bitstream.la
 
 libh264bitstream_la_LDFLAGS = -no-undefined
-libh264bitstream_la_SOURCES = h264_stream.c h264_sei.c h264_avcc.c
+libh264bitstream_la_SOURCES = h264_stream.c h264_sei.c h264_avcc.c h264_nal.c
 
-h264_analyze_SOURCES = h264_analyze.c
+h264_analyze_SOURCES = h264_analyze.c h264_nal_for_app.c
 h264_analyze_LDADD = libh264bitstream.la
 
 include_HEADERS = h264_stream.h h264_sei.h h264_avcc.h
