@@ -86,7 +86,7 @@ For example, to write a simple SPS, use code like this:
     h264_stream_t* h = h264_new();
 
     h->nal->nal_ref_idc = 0x03;
-    h->nal->nal_unit_type = NAL_UNIT_TYPE_PPS;
+    h->nal->nal_unit_type = NAL_UNIT_TYPE_SPS;
 
     h->sps->profile_idc = 0x42;
     h->sps->level_idc = 0x33;
