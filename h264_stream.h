@@ -364,7 +364,7 @@ typedef struct
    The reason why they are all contained in one place is that some of them depend on others, we need to 
    have all of them available to read or write correctly.
  */
-typedef struct
+typedef struct h264_stream_t
 {
     nal_t* nal;
     sps_t* sps;
