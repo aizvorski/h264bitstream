@@ -24,10 +24,6 @@
 #include "h264_stream.h"
 #include "h264_sei.h"
 
-#include <stdio.h>
-#include <stdlib.h> // malloc
-#include <string.h> // memset
-
 sei_t* sei_new()
 {
     sei_t* s = (sei_t*)malloc(sizeof(sei_t));

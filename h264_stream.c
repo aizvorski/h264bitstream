@@ -22,17 +22,21 @@
  */
 
 
+#ifndef __KERNEL__
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#endif
 
 #include "bs.h"
 #include "h264_stream.h"
 #include "h264_sei.h"
 
+#ifndef __KERNEL__
 FILE* h264_dbgfile = NULL;
 
 #define printf(...) fprintf((h264_dbgfile == NULL ? stdout : h264_dbgfile), __VA_ARGS__)
+#endif
 
 /** 
  Calculate the log base 2 of the argument, rounded up. 

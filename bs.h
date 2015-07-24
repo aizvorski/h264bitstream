@@ -23,9 +23,14 @@
 #ifndef _H264_BS_H
 #define _H264_BS_H        1
 
+#ifdef __KERNEL__
+#include <linux/types.h>  /* int types */
+#include <linux/decompress/mm.h>  /* malloc() */
+#else
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -378,6 +383,11 @@ static inline uint64_t bs_next_bytes(bs_t* bs, int nbytes)
    for ( i = 0; i < nbytes; i++ ) { val = ( val << 8 ) | bs->p[i]; }
    return val;
 }
+
+#ifdef __KERNEL__
+#define printf pr_debug
+#define fprintf(file, args...) pr_debug(args)
+#endif
 
 #define bs_print_state(b) fprintf( stderr,  "%s:%d@%s: b->p=0x%02hhX, b->left = %d\n", __FILE__, __LINE__, __FUNCTION__, *b->p, b->bits_left )
 

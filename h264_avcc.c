@@ -1,8 +1,3 @@
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-
 #include "h264_avcc.h"
 #include "bs.h"
 #include "h264_stream.h"

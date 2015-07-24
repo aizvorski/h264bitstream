@@ -20,12 +20,14 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <stdint.h>
-
 #ifndef _H264_SEI_H
 #define _H264_SEI_H        1
 
+#ifdef __KERNEL__
+#include <linux/types.h>  /* int types */
+#else
 #include <stdint.h>
+#endif
 
 #include "bs.h"
 
@@ -40,7 +42,7 @@ typedef struct
     uint8_t* payload;
 } sei_t;
 
-sei_t* sei_new();
+sei_t* sei_new(void);
 void sei_free(sei_t* s);
 
 //D.1 SEI payload syntax

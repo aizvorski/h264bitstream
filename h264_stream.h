@@ -23,9 +23,16 @@
 #ifndef _H264_STREAM_H
 #define _H264_STREAM_H        1
 
+#ifdef __KERNEL__
+#include <linux/types.h>  /* int types */
+#define printf pr_debug
+#define fprintf(file, args...) pr_debug(args)
+#define calloc(nmemb, size) kzalloc((nmemb)*(size), GFP_KERNEL)
+#else
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
+#endif
 
 #include "bs.h"
 #include "h264_sei.h"
@@ -374,7 +381,7 @@ typedef struct
 
 } h264_stream_t;
 
-h264_stream_t* h264_new();
+h264_stream_t* h264_new(void);
 void h264_free(h264_stream_t* h);
 
 int find_nal_unit(uint8_t* buf, int size, int* nal_start, int* nal_end);
@@ -534,8 +541,10 @@ void write_sei_payload( h264_stream_t* h, bs_t* b, int payloadType, int payloadS
 #define H264_PROFILE_EXTENDED  88
 #define H264_PROFILE_HIGH     100
 
+#ifndef __KERNEL__
 // file handle for debug output
 extern FILE* h264_dbgfile;
+#endif
 
 #ifdef __cplusplus
 }
