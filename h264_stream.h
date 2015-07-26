@@ -417,6 +417,7 @@ void read_dec_ref_pic_marking(h264_stream_t* h, bs_t* b);
 int more_rbsp_trailing_data(h264_stream_t* h, bs_t* b);
 
 int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size);
+int write_nal_unit_and_return_tail(h264_stream_t* h, uint8_t* buf, int size, int *tail_nb_bits, u8 *tail);
 
 void write_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b);
 void write_scaling_list(bs_t* b, int* scalingList, int sizeOfScalingList, int* useDefaultScalingMatrixFlag );
