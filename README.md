@@ -5,6 +5,10 @@ A complete set of functions to read and write H.264 video bitstreams, in particu
 
 ## Compiling and installing
 
+1. Install pre-requisites (Debian, Ubuntu)
+  
+    `sudo apt-get install build-essential libtool`
+
 1. Auto-reconfigure the project
 
     `autoreconf -i`
