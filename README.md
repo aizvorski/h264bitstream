@@ -5,9 +5,9 @@ A complete set of functions to read and write H.264 video bitstreams, in particu
 
 ## Compiling and installing
 
-1. Run *autotools* to generate a configure script
+1. Auto-reconfigure the project
 
-    `libtoolize && aclocal && autoconf && automake --add-missing`
+    `autoreconf -i`
 
 1. Run the generated configure script and build the project
 
