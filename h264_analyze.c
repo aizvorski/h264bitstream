@@ -29,26 +29,11 @@
 
 #define BUFSIZE 32*1024*1024
 
-#if (defined(__GNUC__))
-#define HAVE_GETOPT_LONG
-
-#include <getopt.h>
-
-
-static struct option long_options[] =
-{
-    { "probe",   no_argument, NULL, 'p'},
-    { "output",  required_argument, NULL, 'o'},
-    { "help",    no_argument,       NULL, 'h'},
-    { "verbose", required_argument, NULL, 'v'},
-};
-#endif
-
 static char options[] =
-"\t-o output file, defaults to test.264\n"
-"\t-p print information regarding this stream\n"
-"\t-v print more info\n"
-"\t-h print this message and exit\n";
+"\t-o    output file, defaults to stdout\n"
+"\t-p    print information regarding this stream\n"
+"\t-v 0  Don't print more info\n"
+"\t-h    print this message and exit\n";
 
 void usage( )
 {
@@ -73,45 +58,57 @@ int main(int argc, char *argv[])
     int opt_verbose = 1;
     int opt_probe = 0;
 
-#ifdef HAVE_GETOPT_LONG
     int c;
-    int long_options_index;
-    extern char* optarg;
-    extern int   optind;
+    int optind;
+    int i = 1;
+    h264_dbgfile = NULL;
 
-    while ( ( c = getopt_long( argc, argv, "o:p:hv", long_options, &long_options_index) ) != -1 )
+    while (i < argc)
     {
-        switch ( c )
+        //printf("Parsing arg %d '%s'\n", i, argv[i]);
+        c = argv[i][0];    // First character of arg
+        if (c == '-')
         {
-            case 'o':
-                if (h264_dbgfile == NULL) { h264_dbgfile = fopen( optarg, "wt"); }
-                break;
-            case 'p':
-                opt_probe = 1;
-                opt_verbose = 0;
-                break;
-            case 'v':
-                opt_verbose = atoi( optarg );
-                break;
-            case 'h':
-            default:
-                usage( );
-                return 1;
+            c = argv[i][1];    // Second character of arg
+            switch ( c )
+            {
+                case 'o':
+                    if (h264_dbgfile == NULL) {
+                        // Use the next arg
+                        h264_dbgfile = fopen( argv[i+1], "wt");
+                        i++;
+                    }
+                    break;
+                case 'p':
+                    opt_probe = 1;
+                    opt_verbose = 0;
+                    break;
+                case 'v':
+                    // Use the next arg
+                    opt_verbose = atoi(argv[i+1]);
+                    i++;
+                    break;
+                case 'h':
+                default:
+                    usage( );
+                    return 1;
+            }
         }
+        else
+        {
+            optind = i; // This is a string, not an option switch
+        }
+
+        // Move to the next arg
+        i++;
     }
 
+    //printf("Opening '%s' for input\n", argv[optind]);
     infile = fopen(argv[optind], "rb");
-
-#else
-
-    infile = fopen(argv[1], "rb");
-
-#endif
 
     if (infile == NULL) { fprintf( stderr, "!! Error: could not open file: %s \n", strerror(errno)); exit(EXIT_FAILURE); }
 
     if (h264_dbgfile == NULL) { h264_dbgfile = stdout; }
-    
 
     size_t rsz = 0;
     size_t sz = 0;
@@ -135,6 +132,7 @@ int main(int argc, char *argv[])
         {
             if ( opt_verbose > 0 )
             {
+               fprintf( h264_dbgfile, "\n");    // Blank line makes it easier to find NAL units :-)
                fprintf( h264_dbgfile, "!! Found NAL at offset %lld (0x%04llX), size %lld (0x%04llX) \n",
                       (long long int)(off + (p - buf) + nal_start),
                       (long long int)(off + (p - buf) + nal_start),
