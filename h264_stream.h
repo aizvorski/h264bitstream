@@ -23,9 +23,16 @@
 #ifndef _H264_STREAM_H
 #define _H264_STREAM_H        1
 
+#ifdef __KERNEL__
+#include <linux/types.h>  /* int types */
+#define printf pr_debug
+#define fprintf(file, args...) pr_debug(args)
+#define calloc(nmemb, size) kzalloc((nmemb)*(size), GFP_KERNEL)
+#else
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
+#endif
 
 #include "bs.h"
 #include "h264_sei.h"
@@ -357,7 +364,7 @@ typedef struct
    The reason why they are all contained in one place is that some of them depend on others, we need to 
    have all of them available to read or write correctly.
  */
-typedef struct
+typedef struct h264_stream_t
 {
     nal_t* nal;
     sps_t* sps;
@@ -374,7 +381,7 @@ typedef struct
 
 } h264_stream_t;
 
-h264_stream_t* h264_new();
+h264_stream_t* h264_new(void);
 void h264_free(h264_stream_t* h);
 
 int find_nal_unit(uint8_t* buf, int size, int* nal_start, int* nal_end);
@@ -410,6 +417,7 @@ void read_dec_ref_pic_marking(h264_stream_t* h, bs_t* b);
 int more_rbsp_trailing_data(h264_stream_t* h, bs_t* b);
 
 int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size);
+int write_nal_unit_and_return_tail(h264_stream_t* h, uint8_t* buf, int size, int *tail_nb_bits, u8 *tail);
 
 void write_seq_parameter_set_rbsp(h264_stream_t* h, bs_t* b);
 void write_scaling_list(bs_t* b, int* scalingList, int sizeOfScalingList, int* useDefaultScalingMatrixFlag );
@@ -534,8 +542,10 @@ void write_sei_payload( h264_stream_t* h, bs_t* b, int payloadType, int payloadS
 #define H264_PROFILE_EXTENDED  88
 #define H264_PROFILE_HIGH     100
 
+#ifndef __KERNEL__
 // file handle for debug output
 extern FILE* h264_dbgfile;
+#endif
 
 #ifdef __cplusplus
 }

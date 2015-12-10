@@ -1,8 +1,3 @@
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-
 #include "h264_avcc.h"
 #include "bs.h"
 #include "h264_stream.h"
@@ -113,6 +108,7 @@ int write_avcc(avcc_t* avcc, h264_stream_t* h, bs_t* b)
   return bs_pos(b);
 }
 
+#if 0
 void debug_avcc(avcc_t* avcc)
 {
   printf("======= AVC Decoder Configuration Record =======\n");
@@ -140,3 +136,4 @@ void debug_avcc(avcc_t* avcc)
     debug_pps(avcc->pps_table[i]);
   }
 }
+#endif

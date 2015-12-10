@@ -22,17 +22,21 @@
  */
 
 
+#ifndef __KERNEL__
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#endif
 
 #include "bs.h"
 #include "h264_stream.h"
 #include "h264_sei.h"
 
+#ifndef __KERNEL__
 FILE* h264_dbgfile = NULL;
 
 #define printf(...) fprintf((h264_dbgfile == NULL ? stdout : h264_dbgfile), __VA_ARGS__)
+#endif
 
 /** 
  Calculate the log base 2 of the argument, rounded up. 
@@ -1106,6 +1110,94 @@ int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
     }
 
     if (bs_overrun(b)) { bs_free(b); free(rbsp_buf); return -1; }
+
+    if( 1 )
+    {
+    // now get the actual size used
+    rbsp_size = bs_pos(b);
+
+    int rc = rbsp_to_nal(rbsp_buf, &rbsp_size, buf, &nal_size);
+    if (rc < 0) { bs_free(b); free(rbsp_buf); return -1; }
+    }
+
+    bs_free(b);
+    free(rbsp_buf);
+
+    return nal_size;
+}
+
+int write_nal_unit_and_return_tail(h264_stream_t* h, uint8_t* buf, int size, int *tail_nb_bits, u8 *tail)
+{
+    nal_t* nal = h->nal;
+
+    int nal_size = size;
+    int rbsp_size = size;
+    uint8_t* rbsp_buf = (uint8_t*)calloc(1, rbsp_size);
+
+    if( 0 )
+    {
+    int rc = nal_to_rbsp(buf, &nal_size, rbsp_buf, &rbsp_size);
+
+    if (rc < 0) { free(rbsp_buf); return -1; } // handle conversion error
+    }
+
+    if( 1 )
+    {
+    rbsp_size = size*3/4; // NOTE this may have to be slightly smaller (3/4 smaller, worst case) in order to be guaranteed to fit
+    }
+
+    bs_t* b = bs_new(rbsp_buf, rbsp_size);
+    /* forbidden_zero_bit */ bs_write_u(b, 1, 0);
+    bs_write_u(b, 2, nal->nal_ref_idc);
+    bs_write_u(b, 5, nal->nal_unit_type);
+
+    switch ( nal->nal_unit_type )
+    {
+        case NAL_UNIT_TYPE_CODED_SLICE_IDR:
+        case NAL_UNIT_TYPE_CODED_SLICE_NON_IDR:  
+        case NAL_UNIT_TYPE_CODED_SLICE_AUX:
+            write_slice_layer_rbsp(h, b);
+            break;
+
+#ifdef HAVE_SEI
+        case NAL_UNIT_TYPE_SEI:
+            write_sei_rbsp(h, b);
+            break;
+#endif
+
+        case NAL_UNIT_TYPE_SPS: 
+            write_seq_parameter_set_rbsp(h, b); 
+            break;
+
+        case NAL_UNIT_TYPE_PPS:   
+            write_pic_parameter_set_rbsp(h, b);
+            break;
+
+        case NAL_UNIT_TYPE_AUD:     
+            write_access_unit_delimiter_rbsp(h, b); 
+            break;
+
+        case NAL_UNIT_TYPE_END_OF_SEQUENCE: 
+            write_end_of_seq_rbsp(h, b);
+            break;
+
+        case NAL_UNIT_TYPE_END_OF_STREAM: 
+            write_end_of_stream_rbsp(h, b);
+            break;
+
+        case NAL_UNIT_TYPE_FILLER:
+        case NAL_UNIT_TYPE_SPS_EXT:
+        case NAL_UNIT_TYPE_UNSPECIFIED:
+        case NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_A:  
+        case NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_B: 
+        case NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_C:
+        default:
+            return -1;
+    }
+
+    if (bs_overrun(b)) { bs_free(b); free(rbsp_buf); return -1; }
+    *tail_nb_bits = 8 - b->bits_left;
+    *tail = ((b->p[0])<<b->bits_left);
 
     if( 1 )
     {
