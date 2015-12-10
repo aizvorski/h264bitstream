@@ -45,9 +45,9 @@ static struct option long_options[] =
 #endif
 
 static char options[] =
-"\t-o output file, defaults to test.264\n"
-"\t-p print information regarding this stream\n"
-"\t-v print more info\n"
+"\t-o output_file, defaults to test.264\n"
+"\t-v verbose_level, print more info\n"
+"\t-p print codec for HTML5 video tag's codecs parameter, per RFC6381\n"
 "\t-h print this message and exit\n";
 
 void usage( )
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
     extern char* optarg;
     extern int   optind;
 
-    while ( ( c = getopt_long( argc, argv, "o:p:hv", long_options, &long_options_index) ) != -1 )
+    while ( ( c = getopt_long( argc, argv, "o:phv:", long_options, &long_options_index) ) != -1 )
     {
         switch ( c )
         {
