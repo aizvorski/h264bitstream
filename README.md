@@ -38,7 +38,7 @@ int len;
 h264_stream_t* h = h264_new();
 find_nal_unit(buf, len, &nal_start, &nal_end);
 read_nal_unit(h, &buf[nal_start], nal_end - nal_start);
-debug_nal(h);
+debug_nal(h,h->nal);
 ```
 
 ## Goals
