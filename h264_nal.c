@@ -132,7 +132,7 @@ int find_nal_unit(uint8_t* buf, int size, int* nal_start, int* nal_end)
 
 /**
    Convert RBSP data to NAL data (Annex B format).
-   The size of nal_buf must be 4/3 * the size of the rbsp_buf (rounded up) to guarantee the output will fit.
+   The size of nal_buf must be 3/2 * the size of the rbsp_buf (rounded up) to guarantee the output will fit.
    If that is not true, output may be truncated and an error will be returned.
    If that is true, there is no possible error during this conversion.
    @param[in] rbsp_buf   the rbsp data
