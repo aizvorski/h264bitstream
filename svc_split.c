@@ -36,6 +36,13 @@ int main(int argc, char *argv[])
     
     //scalable layer
     FILE* outfile_layers[32] = {0};
+    
+    //misc packets file
+    memset(fname_buf, 0, 1024);
+    sprintf(fname_buf, "%s.misc", argv[1]);
+    FILE* outfile_misc = fopen(fname_buf, "wb");
+    if (outfile_misc == NULL) { fprintf( stderr, "!! Error: could not open file: %s \n", strerror(errno)); exit(EXIT_FAILURE); }
+    
 
     if (h264_dbgfile == NULL) { h264_dbgfile = stdout; }
     
@@ -118,10 +125,6 @@ int main(int argc, char *argv[])
                     fwrite(p - nal_start, 1, nal_end, outfile_layers[h->sps_subset->sps->seq_parameter_set_id]);
                     break;
                     
-                    //prefix NAL
-                case NAL_UNIT_TYPE_PREFIX_NAL:
-                    break;
-                    
                     //SVC support
                 case NAL_UNIT_TYPE_CODED_SLICE_SVC_EXTENSION:            
                     printf("reference extension pps: %d & sps: %d\n", h->sh->pic_parameter_set_id,
@@ -136,6 +139,10 @@ int main(int argc, char *argv[])
                     
                     //start saving the slices
                     fwrite(p - nal_start, 1, nal_end, outfile_layers[h->pps_table[h->sh->pic_parameter_set_id]->seq_parameter_set_id]);
+                    break;
+                    
+                default:
+                    fwrite(p - nal_start, 1, nal_end, outfile_misc);
                     break;
             }
             
@@ -171,6 +178,7 @@ int main(int argc, char *argv[])
     fclose(h264_dbgfile);
     fclose(infile);
     fclose(outfile_base);
+    fclose(outfile_misc);
     for(int i = 0; i < 32; i++) {
         if (outfile_layers[i] != NULL)
             fclose(outfile_layers[i]);
