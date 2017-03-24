@@ -132,7 +132,7 @@ int find_nal_unit(uint8_t* buf, int size, int* nal_start, int* nal_end)
 
 /**
    Convert RBSP data to NAL data (Annex B format).
-   The size of nal_buf must be 4/3 * the size of the rbsp_buf (rounded up) to guarantee the output will fit.
+   The size of nal_buf must be 3/2 * the size of the rbsp_buf (rounded up) to guarantee the output will fit.
    If that is not true, output may be truncated and an error will be returned.
    If that is true, there is no possible error during this conversion.
    @param[in] rbsp_buf   the rbsp data
@@ -151,7 +151,7 @@ int rbsp_to_nal(const uint8_t* rbsp_buf, const int* rbsp_size, uint8_t* nal_buf,
 
     if (*nal_size > 0) { nal_buf[0] = 0x00; } // zero out first byte since we start writing from second byte
 
-    for ( i = 0; i < *rbsp_size ; i++ )
+    for ( i = 0; i < *rbsp_size ; )
     {
         if ( j >= *nal_size ) 
         {
@@ -164,6 +164,7 @@ int rbsp_to_nal(const uint8_t* rbsp_buf, const int* rbsp_size, uint8_t* nal_buf,
             nal_buf[j] = 0x03;
             j++;
             count = 0;
+            continue;
         }
         nal_buf[j] = rbsp_buf[i];
         if ( rbsp_buf[i] == 0x00 )
@@ -174,6 +175,7 @@ int rbsp_to_nal(const uint8_t* rbsp_buf, const int* rbsp_size, uint8_t* nal_buf,
         {
             count = 0;
         }
+        i++;
         j++;
     }
 
