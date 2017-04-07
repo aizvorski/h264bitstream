@@ -2455,11 +2455,19 @@ void read_debug_slice_layer_rbsp(h264_stream_t* h,  bs_t* b)
         if ( slice_data->rbsp_buf != NULL ) free( slice_data->rbsp_buf ); 
         uint8_t *sptr = b->p + (!!b->bits_left); // CABAC-specific: skip alignment bits, if there are any
         slice_data->rbsp_size = b->end - sptr;
-        
-        slice_data->rbsp_buf = (uint8_t*)malloc(slice_data->rbsp_size);
-        memcpy( slice_data->rbsp_buf, sptr, slice_data->rbsp_size );
-        // ugly hack: since next NALU starts at byte border, we are going to be padded by trailing_bits;
-        return;
+
+        if ( slice_data->rbsp_size > 0 )
+        {
+            slice_data->rbsp_buf = (uint8_t*)malloc(slice_data->rbsp_size);
+            memcpy( slice_data->rbsp_buf, sptr, slice_data->rbsp_size );
+            // ugly hack: since next NALU starts at byte border, we are going to be padded by trailing_bits;
+            return;
+        }
+        else
+        {
+            slice_data->rbsp_buf = NULL;
+            slice_data->rbsp_size = 0;
+        }
     }
 
     // FIXME should read or skip data
@@ -2540,6 +2548,8 @@ void read_debug_slice_header(h264_stream_t* h, bs_t* b)
     sps_t* sps = h->sps;
     memcpy(h->pps_table[sh->pic_parameter_set_id], h->pps, sizeof(pps_t));
     memcpy(h->sps_table[pps->seq_parameter_set_id], h->sps, sizeof(sps_t));
+
+    //FIXME colour_plane_id
 
     printf("%d.%d: ", b->p - b->start, b->bits_left); sh->frame_num = bs_read_u(b, sps->log2_max_frame_num_minus4 + 4 ); printf("sh->frame_num: %d \n", sh->frame_num);  // was u(v)
     if( !sps->frame_mbs_only_flag )
@@ -2692,7 +2702,7 @@ void read_debug_pred_weight_table(h264_stream_t* h, bs_t* b)
     int i, j;
 
     printf("%d.%d: ", b->p - b->start, b->bits_left); sh->pwt.luma_log2_weight_denom = bs_read_ue(b); printf("sh->pwt.luma_log2_weight_denom: %d \n", sh->pwt.luma_log2_weight_denom); 
-    if( sps->chroma_format_idc != 0 )
+    if( sps->chroma_format_idc != 0 ) //FIXME ChromaArrayType may differ from chroma_format_idc
     {
         printf("%d.%d: ", b->p - b->start, b->bits_left); sh->pwt.chroma_log2_weight_denom = bs_read_ue(b); printf("sh->pwt.chroma_log2_weight_denom: %d \n", sh->pwt.chroma_log2_weight_denom); 
     }
@@ -2704,7 +2714,7 @@ void read_debug_pred_weight_table(h264_stream_t* h, bs_t* b)
             printf("%d.%d: ", b->p - b->start, b->bits_left); sh->pwt.luma_weight_l0[ i ] = bs_read_se(b); printf("sh->pwt.luma_weight_l0[ i ]: %d \n", sh->pwt.luma_weight_l0[ i ]); 
             printf("%d.%d: ", b->p - b->start, b->bits_left); sh->pwt.luma_offset_l0[ i ] = bs_read_se(b); printf("sh->pwt.luma_offset_l0[ i ]: %d \n", sh->pwt.luma_offset_l0[ i ]); 
         }
-        if ( sps->chroma_format_idc != 0 )
+        if ( sps->chroma_format_idc != 0 ) //FIXME ChromaArrayType may differ from chroma_format_idc
         {
             printf("%d.%d: ", b->p - b->start, b->bits_left); sh->pwt.chroma_weight_l0_flag[i] = bs_read_u1(b); printf("sh->pwt.chroma_weight_l0_flag[i]: %d \n", sh->pwt.chroma_weight_l0_flag[i]); 
             if( sh->pwt.chroma_weight_l0_flag[i] )
