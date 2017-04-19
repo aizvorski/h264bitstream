@@ -178,9 +178,9 @@ typedef struct
     int transform_8x8_mode_flag;
     int pic_scaling_matrix_present_flag;
        int pic_scaling_list_present_flag[8];
-       int* ScalingList4x4[6];
+       int ScalingList4x4[6][16];
        int UseDefaultScalingMatrix4x4Flag[6];
-       int* ScalingList8x8[2];
+       int ScalingList8x8[2][64];
        int UseDefaultScalingMatrix8x8Flag[2];
     int second_chroma_qp_index_offset;
 } pps_t;
