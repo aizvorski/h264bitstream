@@ -1,0 +1,8 @@
+dependencies:
+    pre:
+        - sudo apt-get install autoconf libtool build-essential
+compile:
+  override:
+    - autoreconf -i
+    - ./configure
+    - make
