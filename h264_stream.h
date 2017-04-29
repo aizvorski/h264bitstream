@@ -74,11 +74,11 @@ typedef struct
     int bit_depth_chroma_minus8;
     int qpprime_y_zero_transform_bypass_flag;
     int seq_scaling_matrix_present_flag;
-      int seq_scaling_list_present_flag[8];
+      int seq_scaling_list_present_flag[12];
       int ScalingList4x4[6][16];
       int UseDefaultScalingMatrix4x4Flag[6];
-      int ScalingList8x8[2][64];
-      int UseDefaultScalingMatrix8x8Flag[2];
+      int ScalingList8x8[6][64];
+      int UseDefaultScalingMatrix8x8Flag[6];
     int log2_max_frame_num_minus4;
     int pic_order_cnt_type;
     int log2_max_pic_order_cnt_lsb_minus4;
