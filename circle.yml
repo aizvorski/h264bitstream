@@ -1,0 +1,15 @@
+dependencies:
+    pre:
+        - sudo apt-get install autoconf libtool build-essential
+compile:
+  override:
+    - autoreconf -i
+    - ./configure
+    - make
+
+test:
+  override:
+    - ./h264_analyze samples/JM_cqm_cabac.264 > tmp1.out
+    - diff -u samples/JM_cqm_cabac.out tmp1.out
+    - ./h264_analyze samples/x264_test.264 > tmp2.out
+    - diff -u samples/x264_test.out tmp2.out

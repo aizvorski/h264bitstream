@@ -1,0 +1,394 @@
+!! Found NAL at offset 4 (0x0004), size 25 (0x0019) 
+0.8: forbidden_zero_bit: 0 
+0.7: nal->nal_ref_idc: 3 
+0.5: nal->nal_unit_type: 7 
+1.8: sps->profile_idc: 100 
+2.8: sps->constraint_set0_flag: 0 
+2.7: sps->constraint_set1_flag: 0 
+2.6: sps->constraint_set2_flag: 0 
+2.5: sps->constraint_set3_flag: 0 
+2.4: sps->constraint_set4_flag: 0 
+2.3: sps->constraint_set5_flag: 0 
+2.2: reserved_zero_2bits: 0 
+3.8: sps->level_idc: 30 
+4.8: sps->seq_parameter_set_id: 0 
+4.7: sps->chroma_format_idc: 1 
+4.4: sps->bit_depth_luma_minus8: 0 
+4.3: sps->bit_depth_chroma_minus8: 0 
+4.2: sps->qpprime_y_zero_transform_bypass_flag: 0 
+4.1: sps->seq_scaling_matrix_present_flag: 0 
+5.8: sps->log2_max_frame_num_minus4: 0 
+5.7: sps->pic_order_cnt_type: 0 
+5.6: sps->log2_max_pic_order_cnt_lsb_minus4: 2 
+5.3: sps->num_ref_frames: 4 
+6.6: sps->gaps_in_frame_num_value_allowed_flag: 0 
+6.5: sps->pic_width_in_mbs_minus1: 39 
+7.2: sps->pic_height_in_map_units_minus1: 29 
+8.1: sps->frame_mbs_only_flag: 1 
+9.8: sps->direct_8x8_inference_flag: 1 
+9.7: sps->frame_cropping_flag: 0 
+9.6: sps->vui_parameters_present_flag: 1 
+9.5: sps->vui.aspect_ratio_info_present_flag: 1 
+9.4: sps->vui.aspect_ratio_idc: 1 
+10.4: sps->vui.overscan_info_present_flag: 0 
+10.3: sps->vui.video_signal_type_present_flag: 0 
+10.2: sps->vui.chroma_loc_info_present_flag: 0 
+10.1: sps->vui.timing_info_present_flag: 1 
+11.8: sps->vui.num_units_in_tick: 1 
+15.8: sps->vui.time_scale: 50 
+19.8: sps->vui.fixed_frame_rate_flag: 1 
+19.7: sps->vui.nal_hrd_parameters_present_flag: 0 
+19.6: sps->vui.vcl_hrd_parameters_present_flag: 0 
+19.5: sps->vui.pic_struct_present_flag: 0 
+19.4: sps->vui.bitstream_restriction_flag: 1 
+19.3: sps->vui.motion_vectors_over_pic_boundaries_flag: 1 
+19.2: sps->vui.max_bytes_per_pic_denom: 0 
+19.1: sps->vui.max_bits_per_mb_denom: 0 
+20.8: sps->vui.log2_max_mv_length_horizontal: 10 
+20.1: sps->vui.log2_max_mv_length_vertical: 10 
+21.2: sps->vui.num_reorder_frames: 2 
+22.7: sps->vui.max_dec_frame_buffering: 4 
+22.2: rbsp_stop_one_bit: 1 
+22.1: rbsp_alignment_zero_bit: 0 
+!! Found NAL at offset 33 (0x0021), size 6 (0x0006) 
+0.8: forbidden_zero_bit: 0 
+0.7: nal->nal_ref_idc: 3 
+0.5: nal->nal_unit_type: 8 
+1.8: pps->pic_parameter_set_id: 0 
+1.7: pps->seq_parameter_set_id: 0 
+1.6: pps->entropy_coding_mode_flag: 1 
+1.5: pps->pic_order_present_flag: 0 
+1.4: pps->num_slice_groups_minus1: 0 
+1.3: pps->num_ref_idx_l0_active_minus1: 2 
+2.8: pps->num_ref_idx_l1_active_minus1: 0 
+2.7: pps->weighted_pred_flag: 1 
+2.6: pps->weighted_bipred_idc: 2 
+2.4: pps->pic_init_qp_minus26: -3 
+3.7: pps->pic_init_qs_minus26: 0 
+3.6: pps->chroma_qp_index_offset: -2 
+3.1: pps->deblocking_filter_control_present_flag: 1 
+4.8: pps->constrained_intra_pred_flag: 0 
+4.7: pps->redundant_pic_cnt_present_flag: 0 
+4.6: pps->transform_8x8_mode_flag: 1 
+4.5: pps->pic_scaling_matrix_present_flag: 0 
+4.4: pps->second_chroma_qp_index_offset: -2 
+5.7: rbsp_stop_one_bit: 1 
+5.6: rbsp_alignment_zero_bit: 0 
+5.5: rbsp_alignment_zero_bit: 0 
+5.4: rbsp_alignment_zero_bit: 0 
+5.3: rbsp_alignment_zero_bit: 0 
+5.2: rbsp_alignment_zero_bit: 0 
+5.1: rbsp_alignment_zero_bit: 0 
+!! Found NAL at offset 42 (0x002A), size 686 (0x02AE) 
+0.8: forbidden_zero_bit: 0 
+0.7: nal->nal_ref_idc: 0 
+0.5: nal->nal_unit_type: 6 
+!! Found NAL at offset 731 (0x02DB), size 103 (0x0067) 
+0.8: forbidden_zero_bit: 0 
+0.7: nal->nal_ref_idc: 3 
+0.5: nal->nal_unit_type: 5 
+1.8: sh->first_mb_in_slice: 0 
+1.7: sh->slice_type: 7 
+2.8: sh->pic_parameter_set_id: 0 
+2.7: sh->frame_num: 0 
+2.3: sh->idr_pic_id: 0 
+2.2: sh->pic_order_cnt_lsb: 0 
+3.4: sh->drpm.no_output_of_prior_pics_flag: 0 
+3.3: sh->drpm.long_term_reference_flag: 0 
+3.2: sh->slice_qp_delta: -14 
+4.1: sh->disable_deblocking_filter_idc: 0 
+5.8: sh->slice_alpha_c0_offset_div2: 0 
+5.7: sh->slice_beta_offset_div2: 0 
+!! Found NAL at offset 838 (0x0346), size 19 (0x0013) 
+0.8: forbidden_zero_bit: 0 
+0.7: nal->nal_ref_idc: 2 
+0.5: nal->nal_unit_type: 1 
+1.8: sh->first_mb_in_slice: 0 
+1.7: sh->slice_type: 5 
+1.2: sh->pic_parameter_set_id: 0 
+1.1: sh->frame_num: 1 
+2.5: sh->pic_order_cnt_lsb: 8 
+3.7: sh->num_ref_idx_active_override_flag: 1 
+3.6: sh->num_ref_idx_l0_active_minus1: 0 
+3.5: sh->rplr.ref_pic_list_reordering_flag_l0: 0 
+3.4: sh->pwt.luma_log2_weight_denom: 0 
+3.3: sh->pwt.chroma_log2_weight_denom: 0 
+3.2: sh->pwt.luma_weight_l0_flag[i]: 0 
+3.1: sh->pwt.chroma_weight_l0_flag[i]: 0 
+4.8: sh->pwt.luma_weight_l0_flag[i]: 0 
+4.7: sh->pwt.chroma_weight_l0_flag[i]: 1 
+4.6: sh->pwt.chroma_weight_l0[ i ][ j ]: -13 
+5.5: sh->pwt.chroma_offset_l0[ i ][ j ]: 0 
+5.4: sh->pwt.chroma_weight_l0[ i ][ j ]: 0 
+5.3: sh->pwt.chroma_offset_l0[ i ][ j ]: 0 
+5.2: sh->pwt.luma_weight_l0_flag[i]: 1 
+5.1: sh->pwt.luma_weight_l0[ i ]: 0 
+6.8: sh->pwt.luma_offset_l0[ i ]: 0 
+6.7: sh->pwt.chroma_weight_l0_flag[i]: 1 
+6.6: sh->pwt.chroma_weight_l0[ i ][ j ]: 0 
+6.5: sh->pwt.chroma_offset_l0[ i ][ j ]: 0 
+6.4: sh->pwt.chroma_weight_l0[ i ][ j ]: 0 
+6.3: sh->pwt.chroma_offset_l0[ i ][ j ]: 0 
+6.2: sh->drpm.adaptive_ref_pic_marking_mode_flag: 1 
+6.1: sh->drpm.memory_management_control_operation[ n ]: 1 
+7.6: sh->drpm.difference_of_pic_nums_minus1[ n ]: 0 
+7.5: sh->drpm.memory_management_control_operation[ n ]: 6 
+8.8: sh->drpm.long_term_frame_idx[ n ]: 0 
+8.7: sh->drpm.memory_management_control_operation[ n ]: 15 
+9.6: sh->drpm.memory_management_control_operation[ n ]: 182783 
+17.5: sh->cabac_init_idc: 0 
+17.4: sh->slice_qp_delta: 0 
+17.3: sh->disable_deblocking_filter_idc: 0 
+17.2: sh->slice_alpha_c0_offset_div2: 0 
+17.1: sh->slice_beta_offset_div2: 0 
+18.8: rbsp_stop_one_bit: 0 
+18.7: rbsp_alignment_zero_bit: 0 
+18.6: rbsp_alignment_zero_bit: 0 
+18.5: rbsp_alignment_zero_bit: 0 
+18.4: rbsp_alignment_zero_bit: 0 
+18.3: rbsp_alignment_zero_bit: 0 
+18.2: rbsp_alignment_zero_bit: 0 
+18.1: rbsp_alignment_zero_bit: 0 
+!! Found NAL at offset 861 (0x035D), size 16 (0x0010) 
+0.8: forbidden_zero_bit: 0 
+0.7: nal->nal_ref_idc: 2 
+0.5: nal->nal_unit_type: 1 
+1.8: sh->first_mb_in_slice: 0 
+1.7: sh->slice_type: 6 
+1.2: sh->pic_parameter_set_id: 0 
+1.1: sh->frame_num: 2 
+2.5: sh->pic_order_cnt_lsb: 4 
+3.7: sh->direct_spatial_mv_pred_flag: 1 
+3.6: sh->num_ref_idx_active_override_flag: 1 
+3.5: sh->num_ref_idx_l0_active_minus1: 0 
+3.4: sh->num_ref_idx_l1_active_minus1: 0 
+3.3: sh->rplr.ref_pic_list_reordering_flag_l0: 0 
+3.2: sh->rplr.ref_pic_list_reordering_flag_l1: 0 
+3.1: sh->drpm.adaptive_ref_pic_marking_mode_flag: 0 
+4.8: sh->cabac_init_idc: 0 
+4.7: sh->slice_qp_delta: -11 
+5.6: sh->disable_deblocking_filter_idc: 0 
+5.5: sh->slice_alpha_c0_offset_div2: 0 
+5.4: sh->slice_beta_offset_div2: 0 
+!! Found NAL at offset 881 (0x0371), size 16 (0x0010) 
+0.8: forbidden_zero_bit: 0 
+0.7: nal->nal_ref_idc: 0 
+0.5: nal->nal_unit_type: 1 
+1.8: sh->first_mb_in_slice: 0 
+1.7: sh->slice_type: 6 
+1.2: sh->pic_parameter_set_id: 0 
+1.1: sh->frame_num: 3 
+2.5: sh->pic_order_cnt_lsb: 2 
+3.7: sh->direct_spatial_mv_pred_flag: 1 
+3.6: sh->num_ref_idx_active_override_flag: 1 
+3.5: sh->num_ref_idx_l0_active_minus1: 0 
+3.4: sh->num_ref_idx_l1_active_minus1: 1 
+3.1: sh->rplr.ref_pic_list_reordering_flag_l0: 0 
+4.8: sh->rplr.ref_pic_list_reordering_flag_l1: 0 
+4.7: sh->cabac_init_idc: 0 
+4.6: sh->slice_qp_delta: -10 
+5.5: sh->disable_deblocking_filter_idc: 0 
+5.4: sh->slice_alpha_c0_offset_div2: 0 
+5.3: sh->slice_beta_offset_div2: 0 
+!! Found NAL at offset 901 (0x0385), size 16 (0x0010) 
+0.8: forbidden_zero_bit: 0 
+0.7: nal->nal_ref_idc: 0 
+0.5: nal->nal_unit_type: 1 
+1.8: sh->first_mb_in_slice: 0 
+1.7: sh->slice_type: 6 
+1.2: sh->pic_parameter_set_id: 0 
+1.1: sh->frame_num: 3 
+2.5: sh->pic_order_cnt_lsb: 6 
+3.7: sh->direct_spatial_mv_pred_flag: 1 
+3.6: sh->num_ref_idx_active_override_flag: 1 
+3.5: sh->num_ref_idx_l0_active_minus1: 1 
+3.2: sh->num_ref_idx_l1_active_minus1: 0 
+3.1: sh->rplr.ref_pic_list_reordering_flag_l0: 0 
+4.8: sh->rplr.ref_pic_list_reordering_flag_l1: 0 
+4.7: sh->cabac_init_idc: 0 
+4.6: sh->slice_qp_delta: -10 
+5.5: sh->disable_deblocking_filter_idc: 0 
+5.4: sh->slice_alpha_c0_offset_div2: 0 
+5.3: sh->slice_beta_offset_div2: 0 
+!! Found NAL at offset 921 (0x0399), size 24 (0x0018) 
+0.8: forbidden_zero_bit: 0 
+0.7: nal->nal_ref_idc: 2 
+0.5: nal->nal_unit_type: 1 
+1.8: sh->first_mb_in_slice: 0 
+1.7: sh->slice_type: 5 
+1.2: sh->pic_parameter_set_id: 0 
+1.1: sh->frame_num: 3 
+2.5: sh->pic_order_cnt_lsb: 16 
+3.7: sh->num_ref_idx_active_override_flag: 1 
+3.6: sh->num_ref_idx_l0_active_minus1: 3 
+3.1: sh->rplr.ref_pic_list_reordering_flag_l0: 1 
+4.8: sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ]: 0 
+4.7: sh->rplr.reorder_l0.abs_diff_pic_num_minus1[ n ]: 1 
+4.4: sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ]: 0 
+4.3: sh->rplr.reorder_l0.abs_diff_pic_num_minus1[ n ]: 15 
+5.2: sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ]: 1 
+6.7: sh->rplr.reorder_l0.abs_diff_pic_num_minus1[ n ]: 0 
+6.6: sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ]: 0 
+6.5: sh->rplr.reorder_l0.abs_diff_pic_num_minus1[ n ]: 1 
+6.2: sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ]: 3 
+7.5: sh->pwt.luma_log2_weight_denom: 0 
+7.4: sh->pwt.chroma_log2_weight_denom: 0 
+7.3: sh->pwt.luma_weight_l0_flag[i]: 0 
+7.2: sh->pwt.chroma_weight_l0_flag[i]: 0 
+7.1: sh->pwt.luma_weight_l0_flag[i]: 1 
+8.8: sh->pwt.luma_weight_l0[ i ]: 1 
+8.5: sh->pwt.luma_offset_l0[ i ]: -1 
+8.2: sh->pwt.chroma_weight_l0_flag[i]: 0 
+8.1: sh->pwt.luma_weight_l0_flag[i]: 0 
+9.8: sh->pwt.chroma_weight_l0_flag[i]: 0 
+9.7: sh->drpm.adaptive_ref_pic_marking_mode_flag: 0 
+9.6: sh->cabac_init_idc: 3 
+9.1: sh->slice_qp_delta: 3 
+10.4: sh->disable_deblocking_filter_idc: 2 
+10.1: sh->slice_alpha_c0_offset_div2: 0 
+11.8: sh->slice_beta_offset_div2: 0 
+!! Found NAL at offset 949 (0x03B5), size 18 (0x0012) 
+0.8: forbidden_zero_bit: 0 
+0.7: nal->nal_ref_idc: 2 
+0.5: nal->nal_unit_type: 1 
+1.8: sh->first_mb_in_slice: 0 
+1.7: sh->slice_type: 6 
+1.2: sh->pic_parameter_set_id: 0 
+1.1: sh->frame_num: 4 
+2.5: sh->pic_order_cnt_lsb: 12 
+3.7: sh->direct_spatial_mv_pred_flag: 1 
+3.6: sh->num_ref_idx_active_override_flag: 0 
+3.5: sh->rplr.ref_pic_list_reordering_flag_l0: 0 
+3.4: sh->rplr.ref_pic_list_reordering_flag_l1: 0 
+3.3: sh->drpm.adaptive_ref_pic_marking_mode_flag: 1 
+3.2: sh->drpm.memory_management_control_operation[ n ]: 1 
+4.7: sh->drpm.difference_of_pic_nums_minus1[ n ]: 3 
+4.2: sh->drpm.memory_management_control_operation[ n ]: 1 
+5.7: sh->drpm.difference_of_pic_nums_minus1[ n ]: 1 
+5.4: sh->drpm.memory_management_control_operation[ n ]: 0 
+5.3: sh->cabac_init_idc: 0 
+5.2: sh->slice_qp_delta: -11 
+6.1: sh->disable_deblocking_filter_idc: 0 
+7.8: sh->slice_alpha_c0_offset_div2: 0 
+7.7: sh->slice_beta_offset_div2: 0 
+!! Found NAL at offset 971 (0x03CB), size 16 (0x0010) 
+0.8: forbidden_zero_bit: 0 
+0.7: nal->nal_ref_idc: 0 
+0.5: nal->nal_unit_type: 1 
+1.8: sh->first_mb_in_slice: 0 
+1.7: sh->slice_type: 6 
+1.2: sh->pic_parameter_set_id: 0 
+1.1: sh->frame_num: 5 
+2.5: sh->pic_order_cnt_lsb: 10 
+3.7: sh->direct_spatial_mv_pred_flag: 1 
+3.6: sh->num_ref_idx_active_override_flag: 1 
+3.5: sh->num_ref_idx_l0_active_minus1: 0 
+3.4: sh->num_ref_idx_l1_active_minus1: 1 
+3.1: sh->rplr.ref_pic_list_reordering_flag_l0: 0 
+4.8: sh->rplr.ref_pic_list_reordering_flag_l1: 0 
+4.7: sh->cabac_init_idc: 0 
+4.6: sh->slice_qp_delta: -10 
+5.5: sh->disable_deblocking_filter_idc: 0 
+5.4: sh->slice_alpha_c0_offset_div2: 0 
+5.3: sh->slice_beta_offset_div2: 0 
+!! Found NAL at offset 991 (0x03DF), size 16 (0x0010) 
+0.8: forbidden_zero_bit: 0 
+0.7: nal->nal_ref_idc: 0 
+0.5: nal->nal_unit_type: 1 
+1.8: sh->first_mb_in_slice: 0 
+1.7: sh->slice_type: 6 
+1.2: sh->pic_parameter_set_id: 0 
+1.1: sh->frame_num: 5 
+2.5: sh->pic_order_cnt_lsb: 14 
+3.7: sh->direct_spatial_mv_pred_flag: 1 
+3.6: sh->num_ref_idx_active_override_flag: 1 
+3.5: sh->num_ref_idx_l0_active_minus1: 1 
+3.2: sh->num_ref_idx_l1_active_minus1: 0 
+3.1: sh->rplr.ref_pic_list_reordering_flag_l0: 0 
+4.8: sh->rplr.ref_pic_list_reordering_flag_l1: 0 
+4.7: sh->cabac_init_idc: 0 
+4.6: sh->slice_qp_delta: -10 
+5.5: sh->disable_deblocking_filter_idc: 0 
+5.4: sh->slice_alpha_c0_offset_div2: 0 
+5.3: sh->slice_beta_offset_div2: 0 
+!! Found NAL at offset 1011 (0x03F3), size 24 (0x0018) 
+0.8: forbidden_zero_bit: 0 
+0.7: nal->nal_ref_idc: 2 
+0.5: nal->nal_unit_type: 1 
+1.8: sh->first_mb_in_slice: 0 
+1.7: sh->slice_type: 5 
+1.2: sh->pic_parameter_set_id: 0 
+1.1: sh->frame_num: 5 
+2.5: sh->pic_order_cnt_lsb: 24 
+3.7: sh->num_ref_idx_active_override_flag: 1 
+3.6: sh->num_ref_idx_l0_active_minus1: 3 
+3.1: sh->rplr.ref_pic_list_reordering_flag_l0: 1 
+4.8: sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ]: 0 
+4.7: sh->rplr.reorder_l0.abs_diff_pic_num_minus1[ n ]: 1 
+4.4: sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ]: 0 
+4.3: sh->rplr.reorder_l0.abs_diff_pic_num_minus1[ n ]: 15 
+5.2: sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ]: 1 
+6.7: sh->rplr.reorder_l0.abs_diff_pic_num_minus1[ n ]: 0 
+6.6: sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ]: 0 
+6.5: sh->rplr.reorder_l0.abs_diff_pic_num_minus1[ n ]: 2 
+6.2: sh->rplr.reorder_l0.reordering_of_pic_nums_idc[ n ]: 3 
+7.5: sh->pwt.luma_log2_weight_denom: 0 
+7.4: sh->pwt.chroma_log2_weight_denom: 0 
+7.3: sh->pwt.luma_weight_l0_flag[i]: 0 
+7.2: sh->pwt.chroma_weight_l0_flag[i]: 0 
+7.1: sh->pwt.luma_weight_l0_flag[i]: 1 
+8.8: sh->pwt.luma_weight_l0[ i ]: 1 
+8.5: sh->pwt.luma_offset_l0[ i ]: -1 
+8.2: sh->pwt.chroma_weight_l0_flag[i]: 0 
+8.1: sh->pwt.luma_weight_l0_flag[i]: 0 
+9.8: sh->pwt.chroma_weight_l0_flag[i]: 0 
+9.7: sh->drpm.adaptive_ref_pic_marking_mode_flag: 0 
+9.6: sh->cabac_init_idc: 3 
+9.1: sh->slice_qp_delta: -2 
+10.4: sh->disable_deblocking_filter_idc: 2 
+10.1: sh->slice_alpha_c0_offset_div2: 0 
+11.8: sh->slice_beta_offset_div2: 0 
+!! Found NAL at offset 1039 (0x040F), size 18 (0x0012) 
+0.8: forbidden_zero_bit: 0 
+0.7: nal->nal_ref_idc: 2 
+0.5: nal->nal_unit_type: 1 
+1.8: sh->first_mb_in_slice: 0 
+1.7: sh->slice_type: 6 
+1.2: sh->pic_parameter_set_id: 0 
+1.1: sh->frame_num: 6 
+2.5: sh->pic_order_cnt_lsb: 20 
+3.7: sh->direct_spatial_mv_pred_flag: 1 
+3.6: sh->num_ref_idx_active_override_flag: 0 
+3.5: sh->rplr.ref_pic_list_reordering_flag_l0: 0 
+3.4: sh->rplr.ref_pic_list_reordering_flag_l1: 0 
+3.3: sh->drpm.adaptive_ref_pic_marking_mode_flag: 1 
+3.2: sh->drpm.memory_management_control_operation[ n ]: 1 
+4.7: sh->drpm.difference_of_pic_nums_minus1[ n ]: 4 
+4.2: sh->drpm.memory_management_control_operation[ n ]: 1 
+5.7: sh->drpm.difference_of_pic_nums_minus1[ n ]: 1 
+5.4: sh->drpm.memory_management_control_operation[ n ]: 0 
+5.3: sh->cabac_init_idc: 0 
+5.2: sh->slice_qp_delta: -11 
+6.1: sh->disable_deblocking_filter_idc: 0 
+7.8: sh->slice_alpha_c0_offset_div2: 0 
+7.7: sh->slice_beta_offset_div2: 0 
+!! Found NAL at offset 1061 (0x0425), size 16 (0x0010) 
+0.8: forbidden_zero_bit: 0 
+0.7: nal->nal_ref_idc: 0 
+0.5: nal->nal_unit_type: 1 
+1.8: sh->first_mb_in_slice: 0 
+1.7: sh->slice_type: 6 
+1.2: sh->pic_parameter_set_id: 0 
+1.1: sh->frame_num: 7 
+2.5: sh->pic_order_cnt_lsb: 18 
+3.7: sh->direct_spatial_mv_pred_flag: 1 
+3.6: sh->num_ref_idx_active_override_flag: 1 
+3.5: sh->num_ref_idx_l0_active_minus1: 0 
+3.4: sh->num_ref_idx_l1_active_minus1: 1 
+3.1: sh->rplr.ref_pic_list_reordering_flag_l0: 0 
+4.8: sh->rplr.ref_pic_list_reordering_flag_l1: 0 
+4.7: sh->cabac_init_idc: 0 
+4.6: sh->slice_qp_delta: -10 
+5.5: sh->disable_deblocking_filter_idc: 0 
+5.4: sh->slice_alpha_c0_offset_div2: 0 
+5.3: sh->slice_beta_offset_div2: 0 

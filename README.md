@@ -141,12 +141,14 @@ The library does not try to maintain a table of different SPS and PPS, nor does 
 
 ## Copyright
 
+Copyright (C) 2013-2017 Alex Izvorski and contributors
+Copyright (C) 2008-2012 Alex Izvorski and Alex Giladi
 Copyright (C) 2005-2007 Auroras Entertainment, LLC
 
 Written by Alex Izvorski <aizvorski@gmail.com>
 
 This library is distributed under the GNU Lesser General Public License.
 
-Please see the file COPYING for more details.
+Please see the file LICENSE for more details.
 
 Homepage: https://github.com/aizvorski/h264bitstream/
