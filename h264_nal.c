@@ -37,21 +37,33 @@ h264_stream_t* h264_new()
     h264_stream_t* h = (h264_stream_t*)calloc(1, sizeof(h264_stream_t));
 
     h->nal = (nal_t*)calloc(1, sizeof(nal_t));
-
+    h->nal->nal_svc_ext = (nal_svc_ext_t*) calloc(1, sizeof(nal_svc_ext_t));
+    h->nal->prefix_nal_svc = (prefix_nal_svc_t*) calloc(1, sizeof(prefix_nal_svc_t));
+    
     // initialize tables
     for ( int i = 0; i < 32; i++ ) { h->sps_table[i] = (sps_t*)calloc(1, sizeof(sps_t)); }
+    for ( int i = 0; i < 64; i++ )
+    {
+        h->sps_subset_table[i] = (sps_subset_t*)calloc(1, sizeof(sps_subset_t));
+        h->sps_subset_table[i]->sps = (sps_t*)calloc(1, sizeof(sps_t));
+        h->sps_subset_table[i]->sps_svc_ext = (sps_svc_ext_t*) calloc(1, sizeof(sps_svc_ext_t));
+    }
     for ( int i = 0; i < 256; i++ ) { h->pps_table[i] = (pps_t*)calloc(1, sizeof(pps_t)); }
 
-    h->sps = h->sps_table[0];
-    h->pps = h->pps_table[0];
+    h->sps = (sps_t*)calloc(1, sizeof(sps_t));
+    h->sps_subset = (sps_subset_t*)calloc(1, sizeof(sps_subset_t));
+    h->sps_subset->sps = (sps_t*)calloc(1, sizeof(sps_t));
+    h->sps_subset->sps_svc_ext = (sps_svc_ext_t*)calloc(1, sizeof(sps_svc_ext_t));
+    h->pps = (pps_t*)calloc(1, sizeof(pps_t));
     h->aud = (aud_t*)calloc(1, sizeof(aud_t));
     h->num_seis = 0;
     h->seis = NULL;
     h->sei = NULL;  //This is a TEMP pointer at whats in h->seis...
     h->sh = (slice_header_t*)calloc(1, sizeof(slice_header_t));
+    h->sh_svc_ext = (slice_header_svc_ext_t*) calloc(1, sizeof(slice_header_svc_ext_t));
     h->slice_data = (slice_data_rbsp_t*)calloc(1, sizeof(slice_data_rbsp_t));
 
-    return h;   
+    return h;
 }
 
 
@@ -61,9 +73,19 @@ h264_stream_t* h264_new()
  */
 void h264_free(h264_stream_t* h)
 {
+    free(h->nal->nal_svc_ext);
+    free(h->nal->prefix_nal_svc);
     free(h->nal);
 
     for ( int i = 0; i < 32; i++ ) { free( h->sps_table[i] ); }
+    for ( int i = 0; i < 64; i++ )
+    {
+        if( h->sps_subset_table[i]->sps != NULL )
+            free( h->sps_subset_table[i]->sps );
+        if( h->sps_subset_table[i]->sps_svc_ext != NULL )
+            free( h->sps_subset_table[i]->sps_svc_ext );
+        free( h->sps_subset_table[i] );
+    }
     for ( int i = 0; i < 256; i++ ) { free( h->pps_table[i] ); }
 
     free(h->aud);
@@ -77,6 +99,15 @@ void h264_free(h264_stream_t* h)
         free(h->seis);
     }
     free(h->sh);
+    
+    if (h->sh_svc_ext != NULL) free(h->sh_svc_ext);
+    
+    free(h->sps);
+    
+    free(h->sps_subset->sps);
+    free(h->sps_subset->sps_svc_ext);
+    free(h->sps_subset);
+
     free(h);
 }
 

@@ -1,6 +1,3 @@
-h264bitstream
-=============
-
 A library to read and write H.264 video bitstreams, in particular to examine or modify headers.
 
 ## Compile and Install

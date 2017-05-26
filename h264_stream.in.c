@@ -59,7 +59,7 @@ int is_slice_type(int slice_type, int cmp_type)
     else { return 0; }
 }
 
-int more_rbsp_data(h264_stream_t* h, bs_t* bs)
+int more_rbsp_data(bs_t* bs)
 {
     // TODO this version handles reading only. writing version?
 
@@ -141,20 +141,37 @@ int structure(nal_unit)(h264_stream_t* h, uint8_t* buf, int size)
 
     if( is_reading )
     {
-    int rc = nal_to_rbsp(buf, &nal_size, rbsp_buf, &rbsp_size);
+        int rc = nal_to_rbsp(buf, &nal_size, rbsp_buf, &rbsp_size);
 
-    if (rc < 0) { free(rbsp_buf); return -1; } // handle conversion error
+        if (rc < 0) { free(rbsp_buf); return -1; } // handle conversion error
     }
 
     if( is_writing )
     {
-    rbsp_size = size*3/4; // NOTE this may have to be slightly smaller (3/4 smaller, worst case) in order to be guaranteed to fit
+        rbsp_size = size*3/4; // NOTE this may have to be slightly smaller (3/4 smaller, worst case) in order to be guaranteed to fit
     }
 
     bs_t* b = bs_new(rbsp_buf, rbsp_size);
     value( forbidden_zero_bit, f(1, 0) );
     value( nal->nal_ref_idc, u(2) );
     value( nal->nal_unit_type, u(5) );
+    
+    if( nal->nal_unit_type == 14 || nal->nal_unit_type == 21 || nal->nal_unit_type == 20 )
+    {
+        if( nal->nal_unit_type != 21 )
+        {
+            value( nal->svc_extension_flag, u1 );
+        }
+        else
+        {
+            value( nal->avc_3d_extension_flag, u1 );
+        }
+        
+        if( nal->svc_extension_flag )
+        {
+            structure(nal_unit_header_svc_extension)(nal->nal_svc_ext, b);
+        }
+    }
 
     switch ( nal->nal_unit_type )
     {
@@ -167,29 +184,68 @@ int structure(nal_unit)(h264_stream_t* h, uint8_t* buf, int size)
 #ifdef HAVE_SEI
         case NAL_UNIT_TYPE_SEI:
             structure(sei_rbsp)(h, b);
+            structure(rbsp_trailing_bits)(b);
             break;
 #endif
 
         case NAL_UNIT_TYPE_SPS: 
-            structure(seq_parameter_set_rbsp)(h, b); 
+            structure(seq_parameter_set_rbsp)(h->sps, b);
+            structure(rbsp_trailing_bits)(b);
+            
+            if( is_reading )
+            {
+                memcpy(h->sps_table[h->sps->seq_parameter_set_id], h->sps, sizeof(sps_t));
+            }
+
             break;
 
         case NAL_UNIT_TYPE_PPS:   
             structure(pic_parameter_set_rbsp)(h, b);
+            structure(rbsp_trailing_bits)(b);
             break;
 
         case NAL_UNIT_TYPE_AUD:     
             structure(access_unit_delimiter_rbsp)(h, b); 
+            structure(rbsp_trailing_bits)(b);
             break;
 
         case NAL_UNIT_TYPE_END_OF_SEQUENCE: 
             structure(end_of_seq_rbsp)(h, b);
+            structure(rbsp_trailing_bits)(b);
             break;
 
         case NAL_UNIT_TYPE_END_OF_STREAM: 
             structure(end_of_stream_rbsp)(h, b);
+            structure(rbsp_trailing_bits)(b);
             break;
 
+        //SVC support
+        case NAL_UNIT_TYPE_SUBSET_SPS:
+            structure(subset_seq_parameter_set_rbsp)(h->sps_subset, b);
+            structure(rbsp_trailing_bits)(b);
+            
+            if( is_reading )
+            {
+                memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id], h->sps_subset, sizeof(sps_subset_t));
+                //memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->sps, h->sps_subset->sps, sizeof(sps_t));
+                //memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->sps_svc_ext, h->sps_subset->sps_svc_ext, sizeof(sps_svc_ext_t));
+                //h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->additional_extension2_flag = h->sps_subset->additional_extension2_flag;
+            }
+
+            break;
+            
+        //prefix NAL
+        case NAL_UNIT_TYPE_PREFIX_NAL:
+            structure(prefix_nal_unit_rbsp)(h->nal, b);
+            structure(rbsp_trailing_bits)(b);
+            break;
+            
+        //SVC support
+        case NAL_UNIT_TYPE_CODED_SLICE_SVC_EXTENSION:            
+            structure(slice_layer_rbsp)(h, b);
+            
+            break;
+            
         case NAL_UNIT_TYPE_FILLER:
         case NAL_UNIT_TYPE_SPS_EXT:
         case NAL_UNIT_TYPE_UNSPECIFIED:
@@ -204,11 +260,11 @@ int structure(nal_unit)(h264_stream_t* h, uint8_t* buf, int size)
 
     if( is_writing )
     {
-    // now get the actual size used
-    rbsp_size = bs_pos(b);
+        // now get the actual size used
+        rbsp_size = bs_pos(b);
 
-    int rc = rbsp_to_nal(rbsp_buf, &rbsp_size, buf, &nal_size);
-    if (rc < 0) { bs_free(b); free(rbsp_buf); return -1; }
+        int rc = rbsp_to_nal(rbsp_buf, &rbsp_size, buf, &nal_size);
+        if (rc < 0) { bs_free(b); free(rbsp_buf); return -1; }
     }
 
     bs_free(b);
@@ -217,14 +273,64 @@ int structure(nal_unit)(h264_stream_t* h, uint8_t* buf, int size)
     return nal_size;
 }
 
+//G.7.3.1.1 NAL unit header SVC extension syntax
+void structure(nal_unit_header_svc_extension)(nal_svc_ext_t* nal_svc_ext, bs_t* b)
+{
+    value( nal_svc_ext->idr_flag, u1 );
+    value( nal_svc_ext->priority_id, u(6) );
+    value( nal_svc_ext->no_inter_layer_pred_flag, u1 );
+    value( nal_svc_ext->dependency_id, u(3) );
+    value( nal_svc_ext->quality_id, u(4) );
+    value( nal_svc_ext->temporal_id, u(3) );
+    value( nal_svc_ext->use_ref_base_pic_flag, u1 );
+    value( nal_svc_ext->discardable_flag, u1 );
+    value( nal_svc_ext->output_flag, u1 );
+    value( nal_svc_ext->reserved_three_2bits, u(2) );
+}
 
+//G.7.3.2.12.1 Prefix NAL unit SVC syntax
+void structure(prefix_nal_unit_svc)(nal_t* nal, bs_t* b)
+{
+    if( nal->nal_ref_idc != 0 )
+    {
+        value( nal->prefix_nal_svc->store_ref_base_pic_flag, u1);
+        if( ( nal->nal_svc_ext->use_ref_base_pic_flag || nal->prefix_nal_svc->store_ref_base_pic_flag ) &&
+             !nal->nal_svc_ext->idr_flag )
+        {
+            structure(dec_ref_base_pic_marking)( nal, b );
+        }
+        value( nal->prefix_nal_svc->additional_prefix_nal_unit_extension_flag, u1 );
+        if( nal->prefix_nal_svc->additional_prefix_nal_unit_extension_flag )
+        {
+            while( more_rbsp_data( b ) )
+            {
+                value( nal->prefix_nal_svc->additional_prefix_nal_unit_extension_data_flag, u1 );
+            }
+        }
+    }
+    else if( more_rbsp_data( b ) )
+    {
+        while( more_rbsp_data( b ) )
+        {
+            value( nal->prefix_nal_svc->additional_prefix_nal_unit_extension_data_flag, u1);
+        }
+    }
+}
+
+//7.3.2.12 Prefix NAL unit RBSP syntax
+void structure(prefix_nal_unit_rbsp)(nal_t* nal, bs_t* b)
+{
+    if( nal->svc_extension_flag )
+    {
+        structure(prefix_nal_unit_svc)(nal, b);
+    }
+}
 
 //7.3.2.1 Sequence parameter set RBSP syntax
-void structure(seq_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
+void structure(seq_parameter_set_rbsp)(sps_t* sps, bs_t* b)
 {
     int i;
 
-    sps_t* sps = h->sps;
     if( is_reading )
     {
         memset(sps, 0, sizeof(sps_t));
@@ -243,7 +349,12 @@ void structure(seq_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
     value( sps->seq_parameter_set_id, ue );
 
     if( sps->profile_idc == 100 || sps->profile_idc == 110 ||
-        sps->profile_idc == 122 || sps->profile_idc == 144 )
+        sps->profile_idc == 122 || sps->profile_idc == 244 ||
+        sps->profile_idc == 44 || sps->profile_idc == 83 ||
+        sps->profile_idc == 86 || sps->profile_idc == 118 ||
+        sps->profile_idc == 128 || sps->profile_idc == 138 ||
+        sps->profile_idc == 139 || sps->profile_idc == 134
+       )
     {
         value( sps->chroma_format_idc, ue );
         if( sps->chroma_format_idc == 3 )
@@ -313,16 +424,9 @@ void structure(seq_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
     value( sps->vui_parameters_present_flag, u1 );
     if( sps->vui_parameters_present_flag )
     {
-        structure(vui_parameters)(h, b);
-    }
-    structure(rbsp_trailing_bits)(h, b);
-
-    if( is_reading )
-    {
-        memcpy(h->sps, h->sps_table[sps->seq_parameter_set_id], sizeof(sps_t));
+        structure(vui_parameters)(sps, b);
     }
 }
-
 
 //7.3.2.1.1 Scaling list syntax
 void structure(scaling_list)(bs_t* b, int* scalingList, int sizeOfScalingList, int* useDefaultScalingMatrixFlag )
@@ -358,11 +462,113 @@ void structure(scaling_list)(bs_t* b, int* scalingList, int sizeOfScalingList, i
     }
 }
 
-//Appendix E.1.1 VUI parameters syntax
-void structure(vui_parameters)(h264_stream_t* h, bs_t* b)
+//7.3.2.1.3 Subset sequence parameter set RBSP syntax
+void structure(subset_seq_parameter_set_rbsp)(sps_subset_t* sps_subset, bs_t* b)
 {
-    sps_t* sps = h->sps;
+    structure(seq_parameter_set_rbsp)(sps_subset->sps, b);
+    
+    switch( sps_subset->sps->profile_idc )
+    {
+        case 83:
+        case 86:
+            structure(seq_parameter_set_svc_extension)(sps_subset, b); /* specified in Annex G */
+            
+            sps_svc_ext_t* sps_svc_ext = sps_subset->sps_svc_ext;
+            value(sps_svc_ext->svc_vui_parameters_present_flag, u1);
+            
+            if( sps_svc_ext->svc_vui_parameters_present_flag )
+            {
+                structure(svc_vui_parameters_extension)(sps_svc_ext,b); /* specified in Annex G */
+            }
+            break;
+        default:
+            break;
+    }
+    value(sps_subset->additional_extension2_flag, u1);
+    if( sps_subset->additional_extension2_flag )
+    {
+        while( more_rbsp_data( b ) )
+        {
+            value(sps_subset->additional_extension2_flag, u1);
+        }
+    }
+    
+}
 
+//Appendix G.7.3.2.1.4 Sequence parameter set SVC extension syntax
+void structure(seq_parameter_set_svc_extension)(sps_subset_t* sps_subset, bs_t* b)
+{
+    sps_svc_ext_t* sps_svc_ext = sps_subset->sps_svc_ext;
+    value( sps_svc_ext->inter_layer_deblocking_filter_control_present_flag, u1);
+    value( sps_svc_ext->extended_spatial_scalability_idc, u(2));
+    if( sps_subset->sps->chroma_format_idc == 1 || sps_subset->sps->chroma_format_idc == 2 )
+    {
+        value( sps_svc_ext->chroma_phase_x_plus1_flag, u1 );
+    }
+    if( sps_subset->sps->chroma_format_idc == 1 )
+    {
+        value( sps_svc_ext->chroma_phase_y_plus1, u(2) );
+    }
+    if( sps_svc_ext->extended_spatial_scalability_idc )
+    {
+        if( sps_subset->sps->chroma_format_idc > 0 )
+        {
+            value( sps_svc_ext->seq_ref_layer_chroma_phase_x_plus1_flag, u1 );
+            value( sps_svc_ext->seq_ref_layer_chroma_phase_y_plus1, u(2) );
+        }
+        value( sps_svc_ext->seq_scaled_ref_layer_left_offset, se );
+        value( sps_svc_ext->seq_scaled_ref_layer_top_offset, se );
+        value( sps_svc_ext->seq_scaled_ref_layer_right_offset, se );
+        value( sps_svc_ext->seq_scaled_ref_layer_bottom_offset, se );
+    }
+    value( sps_svc_ext->seq_tcoeff_level_prediction_flag, u1 );
+    if( sps_svc_ext->seq_tcoeff_level_prediction_flag )
+    {
+        value( sps_svc_ext->adaptive_tcoeff_level_prediction_flag, u1 );
+    }
+    value( sps_svc_ext->slice_header_restriction_flag, u1 );
+}
+
+//Appendix G.14.1 SVC VUI parameters extension syntax
+void structure(svc_vui_parameters_extension)(sps_svc_ext_t* sps_svc_ext, bs_t* b)
+{
+    value( sps_svc_ext->vui.vui_ext_num_entries_minus1, ue );
+    for( int i = 0; i <= sps_svc_ext->vui.vui_ext_num_entries_minus1; i++ )
+    {
+        value( sps_svc_ext->vui.vui_ext_dependency_id[i], u(3) );
+        value( sps_svc_ext->vui.vui_ext_quality_id[i], u(4) );
+        value( sps_svc_ext->vui.vui_ext_temporal_id[i], u(3) );
+        value( sps_svc_ext->vui.vui_ext_timing_info_present_flag[i], u1 );
+        if( sps_svc_ext->vui.vui_ext_timing_info_present_flag[i] )
+        {
+            value( sps_svc_ext->vui.vui_ext_num_units_in_tick[i], u(32) );
+            value( sps_svc_ext->vui.vui_ext_time_scale[i], u(32) );
+            value( sps_svc_ext->vui.vui_ext_fixed_frame_rate_flag[i], u1 );
+        }
+
+        value( sps_svc_ext->vui.vui_ext_nal_hrd_parameters_present_flag[i], u1 );
+        if( sps_svc_ext->vui.vui_ext_nal_hrd_parameters_present_flag[i] )
+        {
+            structure(hrd_parameters)(&sps_svc_ext->hrd_vcl, b);
+        }
+        value( sps_svc_ext->vui.vui_ext_vcl_hrd_parameters_present_flag[i], u1 );
+        if( sps_svc_ext->vui.vui_ext_vcl_hrd_parameters_present_flag[i] )
+        {
+            structure(hrd_parameters)(&sps_svc_ext->hrd_nal, b);
+        }
+        
+        if( sps_svc_ext->vui.vui_ext_nal_hrd_parameters_present_flag[i] ||
+            sps_svc_ext->vui.vui_ext_vcl_hrd_parameters_present_flag[i] )
+        {
+            value( sps_svc_ext->vui.vui_ext_low_delay_hrd_flag[i], u1 );
+        }
+        value( sps_svc_ext->vui.vui_ext_pic_struct_present_flag[i], u1 );
+    }
+}
+
+//Appendix E.1.1 VUI parameters syntax
+void structure(vui_parameters)(sps_t* sps, bs_t* b)
+{
     value( sps->vui.aspect_ratio_info_present_flag, u1 );
     if( sps->vui.aspect_ratio_info_present_flag )
     {
@@ -407,12 +613,12 @@ void structure(vui_parameters)(h264_stream_t* h, bs_t* b)
     value( sps->vui.nal_hrd_parameters_present_flag, u1 );
     if( sps->vui.nal_hrd_parameters_present_flag )
     {
-        structure(hrd_parameters)(h, b);
+        structure(hrd_parameters)(&sps->hrd_nal, b);
     }
     value( sps->vui.vcl_hrd_parameters_present_flag, u1 );
     if( sps->vui.vcl_hrd_parameters_present_flag )
     {
-        structure(hrd_parameters)(h, b);
+        structure(hrd_parameters)(&sps->hrd_vcl, b);
     }
     if( sps->vui.nal_hrd_parameters_present_flag || sps->vui.vcl_hrd_parameters_present_flag )
     {
@@ -434,23 +640,21 @@ void structure(vui_parameters)(h264_stream_t* h, bs_t* b)
 
 
 //Appendix E.1.2 HRD parameters syntax
-void structure(hrd_parameters)(h264_stream_t* h, bs_t* b)
+void structure(hrd_parameters)(hrd_t* hrd, bs_t* b)
 {
-    sps_t* sps = h->sps;
-
-    value( sps->hrd.cpb_cnt_minus1, ue );
-    value( sps->hrd.bit_rate_scale, u(4) );
-    value( sps->hrd.cpb_size_scale, u(4) );
-    for( int SchedSelIdx = 0; SchedSelIdx <= sps->hrd.cpb_cnt_minus1; SchedSelIdx++ )
+    value( hrd->cpb_cnt_minus1, ue );
+    value( hrd->bit_rate_scale, u(4) );
+    value( hrd->cpb_size_scale, u(4) );
+    for( int SchedSelIdx = 0; SchedSelIdx <= hrd->cpb_cnt_minus1; SchedSelIdx++ )
     {
-        value( sps->hrd.bit_rate_value_minus1[ SchedSelIdx ], ue );
-        value( sps->hrd.cpb_size_value_minus1[ SchedSelIdx ], ue );
-        value( sps->hrd.cbr_flag[ SchedSelIdx ], u1 );
+        value( hrd->bit_rate_value_minus1[ SchedSelIdx ], ue );
+        value( hrd->cpb_size_value_minus1[ SchedSelIdx ], ue );
+        value( hrd->cbr_flag[ SchedSelIdx ], u1 );
     }
-    value( sps->hrd.initial_cpb_removal_delay_length_minus1, u(5) );
-    value( sps->hrd.cpb_removal_delay_length_minus1, u(5) );
-    value( sps->hrd.dpb_output_delay_length_minus1, u(5) );
-    value( sps->hrd.time_offset_length, u(5) );
+    value( hrd->initial_cpb_removal_delay_length_minus1, u(5) );
+    value( hrd->cpb_removal_delay_length_minus1, u(5) );
+    value( hrd->dpb_output_delay_length_minus1, u(5) );
+    value( hrd->time_offset_length, u(5) );
 }
 
 
@@ -533,7 +737,7 @@ void structure(pic_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
     value( pps->redundant_pic_cnt_present_flag, u1 );
 
     int have_more_data = 0;
-    if( is_reading ) { have_more_data = more_rbsp_data(h, b); }
+    if( is_reading ) { have_more_data = more_rbsp_data(b); }
     if( is_writing )
     {
         have_more_data = pps->transform_8x8_mode_flag | pps->pic_scaling_matrix_present_flag | pps->second_chroma_qp_index_offset != 0;
@@ -565,11 +769,10 @@ void structure(pic_parameter_set_rbsp)(h264_stream_t* h, bs_t* b)
         }
         value( pps->second_chroma_qp_index_offset, se );
     }
-    structure(rbsp_trailing_bits)(h, b);
 
     if( is_reading )
     {
-        memcpy(h->pps, h->pps_table[pps->pic_parameter_set_id], sizeof(pps_t));
+        memcpy(h->pps_table[pps->pic_parameter_set_id], h->pps, sizeof(pps_t));
     }
 }
 
@@ -579,33 +782,30 @@ void structure(sei_rbsp)(h264_stream_t* h, bs_t* b)
 {
     if( is_reading )
     {
-    for( int i = 0; i < h->num_seis; i++ )
-    {
-        sei_free(h->seis[i]);
-    }
+        for( int i = 0; i < h->num_seis; i++ )
+        {
+            sei_free(h->seis[i]);
+        }
     
-    h->num_seis = 0;
-    do {
-        h->num_seis++;
-        h->seis = (sei_t**)realloc(h->seis, h->num_seis * sizeof(sei_t*));
-        h->seis[h->num_seis - 1] = sei_new();
-        h->sei = h->seis[h->num_seis - 1];
-        structure(sei_message)(h, b);
-    } while( more_rbsp_data(h, b) );
-
+        h->num_seis = 0;
+        do {
+            h->num_seis++;
+            h->seis = (sei_t**)realloc(h->seis, h->num_seis * sizeof(sei_t*));
+            h->seis[h->num_seis - 1] = sei_new();
+            h->sei = h->seis[h->num_seis - 1];
+            structure(sei_message)(h, b);
+        } while( more_rbsp_data(b) );
     }
 
     if( is_writing )
     {
-    for (int i = 0; i < h->num_seis; i++)
-    {
-        h->sei = h->seis[i];
-        structure(sei_message)(h, b);
+        for (int i = 0; i < h->num_seis; i++)
+        {
+            h->sei = h->seis[i];
+            structure(sei_message)(h, b);
+        }
+        h->sei = NULL;
     }
-    h->sei = NULL;
-    }
-
-    structure(rbsp_trailing_bits)(h, b);
 }
 
 //7.3.2.3.1 Supplemental enhancement information message syntax
@@ -621,7 +821,7 @@ void structure(sei_message)(h264_stream_t* h, bs_t* b)
         h->sei->payloadType = _read_ff_coded_number(b);
         h->sei->payloadSize = _read_ff_coded_number(b);
     }
-    structure(sei_payload)( h, b, h->sei->payloadType, h->sei->payloadSize );
+    structure(sei_payload)( h, b );
 }
 #endif
 
@@ -629,7 +829,6 @@ void structure(sei_message)(h264_stream_t* h, bs_t* b)
 void structure(access_unit_delimiter_rbsp)(h264_stream_t* h, bs_t* b)
 {
     value( h->aud->primary_pic_type, u(3) );
-    structure(rbsp_trailing_bits)(h, b);
 }
 
 //7.3.2.5 End of sequence RBSP syntax
@@ -649,13 +848,16 @@ void structure(filler_data_rbsp)(h264_stream_t* h, bs_t* b)
     {
         value( ff_byte, f(8, 0xFF) );
     }
-    structure(rbsp_trailing_bits)(h, b);
 }
 
 //7.3.2.8 Slice layer without partitioning RBSP syntax
 void structure(slice_layer_rbsp)(h264_stream_t* h,  bs_t* b)
 {
-    structure(slice_header)(h, b);
+    if (h->nal->nal_unit_type != NAL_UNIT_TYPE_CODED_SLICE_SVC_EXTENSION)
+        structure(slice_header)(h, b);
+    else
+        structure(slice_header_in_scalable_extension)(h, b);
+    
     slice_data_rbsp_t* slice_data = h->slice_data;
 
     if ( slice_data != NULL )
@@ -707,7 +909,7 @@ slice_data_partition_c_layer_rbsp( ) {
 //7.3.2.10 RBSP slice trailing bits syntax
 void structure(rbsp_slice_trailing_bits)(h264_stream_t* h, bs_t* b)
 {
-    structure(rbsp_trailing_bits)(h, b);
+    structure(rbsp_trailing_bits)(b);
     if( h->pps->entropy_coding_mode_flag )
     {
         while( more_rbsp_trailing_data(h, b) )
@@ -718,7 +920,7 @@ void structure(rbsp_slice_trailing_bits)(h264_stream_t* h, bs_t* b)
 }
 
 //7.3.2.11 RBSP trailing bits syntax
-void structure(rbsp_trailing_bits)(h264_stream_t* h, bs_t* b)
+void structure(rbsp_trailing_bits)(bs_t* b)
 {
     value( rbsp_stop_one_bit, f(1, 1) );
 
@@ -746,9 +948,14 @@ void structure(slice_header)(h264_stream_t* h, bs_t* b)
     // TODO check existence, otherwise fail
     pps_t* pps = h->pps;
     sps_t* sps = h->sps;
-    memcpy(h->pps_table[sh->pic_parameter_set_id], h->pps, sizeof(pps_t));
-    memcpy(h->sps_table[pps->seq_parameter_set_id], h->sps, sizeof(sps_t));
+    memcpy(h->pps, h->pps_table[sh->pic_parameter_set_id], sizeof(pps_t));
+    memcpy(h->sps, h->sps_table[pps->seq_parameter_set_id], sizeof(sps_t));
 
+    if (sps->residual_colour_transform_flag)
+    {
+        value( sh->colour_plane_id, u(2) );
+    }
+    
     value( sh->frame_num, u(sps->log2_max_frame_num_minus4 + 4 ) ); // was u(v)
     if( !sps->frame_mbs_only_flag )
     {
@@ -994,3 +1201,230 @@ void structure(dec_ref_pic_marking)(h264_stream_t* h, bs_t* b)
         }
     }
 }
+
+//G.7.3.3.4 Slice header in scalable extension syntax
+void structure(slice_header_in_scalable_extension)(h264_stream_t* h, bs_t* b)
+{
+    slice_header_t* sh = h->sh;
+    slice_header_svc_ext_t* sh_svc_ext = h->sh_svc_ext;
+    if( is_reading )
+    {
+        memset(sh, 0, sizeof(slice_header_t));
+        memset(sh_svc_ext, 0, sizeof(slice_header_svc_ext_t));
+    }
+    
+    nal_t* nal = h->nal;
+    
+    value( sh->first_mb_in_slice, ue );
+    value( sh->slice_type, ue );
+    value( sh->pic_parameter_set_id, ue );
+    
+    // TODO check existence, otherwise fail
+    pps_t* pps = h->pps;
+    sps_subset_t* sps_subset = h->sps_subset;
+    memcpy(h->pps, h->pps_table[sh->pic_parameter_set_id], sizeof(pps_t));
+    memcpy(sps_subset, h->sps_subset_table[pps->seq_parameter_set_id], sizeof(sps_subset_t));
+    //memcpy(h->sps_subset->sps, h->sps_subset_table[pps->seq_parameter_set_id]->sps, sizeof(sps_t));
+    //memcpy(h->sps_subset->sps_svc_ext, h->sps_subset_table[pps->seq_parameter_set_id]->sps_svc_ext, sizeof(sps_svc_ext_t));
+    
+    if (sps_subset->sps->residual_colour_transform_flag)
+    {
+        value( sh->colour_plane_id, u(2) );
+    }
+    
+    value( sh->frame_num, u(sps_subset->sps->log2_max_frame_num_minus4 + 4 ) ); // was u(v)
+    if( !sps_subset->sps->frame_mbs_only_flag )
+    {
+        value( sh->field_pic_flag, u1 );
+        if( sh->field_pic_flag )
+        {
+            value( sh->bottom_field_flag, u1 );
+        }
+    }
+    if( nal->nal_unit_type == 5 )
+    {
+        value( sh->idr_pic_id, ue );
+    }
+    if( sps_subset->sps->pic_order_cnt_type == 0 )
+    {
+        value( sh->pic_order_cnt_lsb, u(sps_subset->sps->log2_max_pic_order_cnt_lsb_minus4 + 4 ) ); // was u(v)
+        if( pps->pic_order_present_flag && !sh->field_pic_flag )
+        {
+            value( sh->delta_pic_order_cnt_bottom, se );
+        }
+    }
+    if( sps_subset->sps->pic_order_cnt_type == 1 && !sps_subset->sps->delta_pic_order_always_zero_flag )
+    {
+        value( sh->delta_pic_order_cnt[ 0 ], se );
+        if( pps->pic_order_present_flag && !sh->field_pic_flag )
+        {
+            value( sh->delta_pic_order_cnt[ 1 ], se );
+        }
+    }
+    if( pps->redundant_pic_cnt_present_flag )
+    {
+        value( sh->redundant_pic_cnt, ue );
+    }
+    if( nal->nal_svc_ext->quality_id == 0)
+    {
+        if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_EB ) )
+        {
+            value( sh->direct_spatial_mv_pred_flag, u1 );
+        }
+        if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_EP ) ||
+            is_slice_type( sh->slice_type, SH_SLICE_TYPE_EB ) )
+        {
+            value( sh->num_ref_idx_active_override_flag, u1 );
+            if( sh->num_ref_idx_active_override_flag )
+            {
+                value( sh->num_ref_idx_l0_active_minus1, ue ); // FIXME does this modify the pps?
+                if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_EB ) )
+                {
+                    value( sh->num_ref_idx_l1_active_minus1, ue );
+                }
+            }
+        }
+        structure(ref_pic_list_reordering)(h, b);
+        if( ( pps->weighted_pred_flag       && is_slice_type( sh->slice_type, SH_SLICE_TYPE_EP ) ) ||
+            ( pps->weighted_bipred_idc == 1 && is_slice_type( sh->slice_type, SH_SLICE_TYPE_EB ) ) )
+        {
+            //svc specific
+            if( !nal->nal_svc_ext->no_inter_layer_pred_flag )
+            {
+                value( sh_svc_ext->base_pred_weight_table_flag, u1 );
+            }
+            if( nal->nal_svc_ext->no_inter_layer_pred_flag || !sh_svc_ext->base_pred_weight_table_flag )
+            {
+                structure(pred_weight_table)(h, b);
+            }
+        }
+        if( nal->nal_ref_idc != 0 )
+        {
+            structure(dec_ref_pic_marking)(h, b);
+            
+            //svc specific
+            if( !sps_subset->sps_svc_ext->slice_header_restriction_flag )
+            {
+                value( sh_svc_ext->store_ref_base_pic_flag, u1 );
+                if( ( nal->nal_svc_ext->use_ref_base_pic_flag || sh_svc_ext->store_ref_base_pic_flag ) &&
+                   ( nal->nal_unit_type != 5 ) )
+                {
+                    structure(dec_ref_base_pic_marking)(h, b);
+                }
+            }
+        }
+    }
+    
+    if( pps->entropy_coding_mode_flag && ! is_slice_type( sh->slice_type, SH_SLICE_TYPE_EI ) )
+    {
+        value( sh->cabac_init_idc, ue );
+    }
+    value( sh->slice_qp_delta, se );
+    if( pps->deblocking_filter_control_present_flag )
+    {
+        value( sh->disable_deblocking_filter_idc, ue );
+        if( sh->disable_deblocking_filter_idc != 1 )
+        {
+            value( sh->slice_alpha_c0_offset_div2, se );
+            value( sh->slice_beta_offset_div2, se );
+        }
+    }
+    if( pps->num_slice_groups_minus1 > 0 &&
+       pps->slice_group_map_type >= 3 && pps->slice_group_map_type <= 5)
+    {
+        int v = intlog2( pps->pic_size_in_map_units_minus1 +  pps->slice_group_change_rate_minus1 + 1 );
+        value( sh->slice_group_change_cycle, u(v) ); // FIXME add 2?
+    }
+    
+    //svc specific
+    if( !nal->nal_svc_ext->no_inter_layer_pred_flag && nal->nal_svc_ext->quality_id == 0 )
+    {
+        value( sh_svc_ext->ref_layer_dq_id, ue );
+        if( sps_subset->sps_svc_ext->inter_layer_deblocking_filter_control_present_flag )
+        {
+            value( sh_svc_ext->disable_inter_layer_deblocking_filter_idc, ue );
+            if( sh_svc_ext->disable_inter_layer_deblocking_filter_idc != 1 )
+            {
+                value( sh_svc_ext->inter_layer_slice_alpha_c0_offset_div2, se );
+                value( sh_svc_ext->inter_layer_slice_beta_offset_div2, se );
+            }
+        }
+        
+        value( sh_svc_ext->constrained_intra_resampling_flag, u1 );
+        if( sps_subset->sps_svc_ext->extended_spatial_scalability_idc == 2 )
+        {
+            if( sps_subset->sps->chroma_format_idc > 0 )
+            {
+                value( sh_svc_ext->ref_layer_chroma_phase_x_plus1_flag, u1 );
+                value( sh_svc_ext->ref_layer_chroma_phase_y_plus1, u(2) );
+            }
+            
+            value( sh_svc_ext->scaled_ref_layer_left_offset, se );
+            value( sh_svc_ext->scaled_ref_layer_top_offset, se );
+            value( sh_svc_ext->scaled_ref_layer_right_offset, se );
+            value( sh_svc_ext->scaled_ref_layer_bottom_offset, se );
+        }
+    }
+    
+    if( !nal->nal_svc_ext->no_inter_layer_pred_flag )
+    {
+        value( sh_svc_ext->slice_skip_flag, u1 );
+        if( sh_svc_ext->slice_skip_flag )
+        {
+            value( sh_svc_ext->num_mbs_in_slice_minus1, ue );
+        }
+        else
+        {
+            value( sh_svc_ext->adaptive_base_mode_flag, u1 );
+            if( !sh_svc_ext->adaptive_base_mode_flag )
+            {
+                value( sh_svc_ext->default_base_mode_flag, u1 );
+            }
+            if( !sh_svc_ext->default_base_mode_flag )
+            {
+                value( sh_svc_ext->adaptive_motion_prediction_flag, u1 );
+                if( !sh_svc_ext->adaptive_motion_prediction_flag )
+                {
+                    value( sh_svc_ext->default_motion_prediction_flag, u1 );
+                }
+            }
+            value( sh_svc_ext->adaptive_residual_prediction_flag, u1 );
+            if( !sh_svc_ext->adaptive_residual_prediction_flag )
+            {
+                value( sh_svc_ext->default_residual_prediction_flag, u1 );
+            }
+        }
+        if( sps_subset->sps_svc_ext->adaptive_tcoeff_level_prediction_flag )
+        {
+            value( sh_svc_ext->tcoeff_level_prediction_flag, u1 );
+        }
+    }
+    
+    if( !sps_subset->sps_svc_ext->slice_header_restriction_flag && !sh_svc_ext->slice_skip_flag )
+    {
+        value( sh_svc_ext->scan_idx_start, u(4) );
+        value( sh_svc_ext->scan_idx_end, u(4) );
+    }
+}
+
+//G.7.3.3.5 Decoded reference base picture marking syntax
+void structure(dec_ref_base_pic_marking)(nal_t* nal, bs_t* b)
+{
+    value( nal->prefix_nal_svc->adaptive_ref_base_pic_marking_mode_flag, u1 );
+    if( nal->prefix_nal_svc->adaptive_ref_base_pic_marking_mode_flag )
+    {
+        do {
+            value( nal->prefix_nal_svc->memory_management_base_control_operation, ue);
+            
+            if( nal->prefix_nal_svc->memory_management_base_control_operation == 1 )
+            {
+                value( nal->prefix_nal_svc->difference_of_base_pic_nums_minus1, ue);
+            }
+            if( nal->prefix_nal_svc->memory_management_base_control_operation == 2 )
+            {
+                value( nal->prefix_nal_svc->long_term_base_pic_num, ue);
+            }
+        } while( nal->prefix_nal_svc->memory_management_base_control_operation != 0 );
+    }
+}
+
