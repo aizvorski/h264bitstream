@@ -1,5 +1,7 @@
 A library to read and write H.264 video bitstreams, in particular to examine or modify headers.
 
+[![CircleCI](https://circleci.com/gh/aizvorski/h264bitstream.svg?style=shield)](https://circleci.com/gh/aizvorski/h264bitstream)
+
 ## Compile and Install
 
 1. Install pre-requisites (Debian, Ubuntu)
