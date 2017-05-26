@@ -13,3 +13,5 @@ test:
     - diff -u samples/JM_cqm_cabac.out tmp1.out
     - ./h264_analyze samples/x264_test.264 > tmp2.out
     - diff -u samples/x264_test.out tmp2.out
+    - ./h264_analyze samples/riverbed-II-360p-48961.264 > tmp3.out
+    - diff -u samples/riverbed-II-360p-48961.out tmp3.out
