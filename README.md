@@ -6,7 +6,7 @@ A library to read and write H.264 video bitstreams, in particular to examine or 
 
 1. Install pre-requisites (Debian, Ubuntu)
   
-    `sudo apt-get install build-essential libtool`
+    `sudo apt-get install build-essential libtool autoconf`
 
 1. Auto-reconfigure the project
 
