@@ -51,23 +51,114 @@ void h264lyze_usage()
 
 // Internal h264lyze object type
 typedef struct h264lyze {
-  char *filename;
+  char *infile;
   uint8_t option
 } h264lyze_t;
 
 // h264lyze user option enum
 enum h264lyze_user_opt {
-  H264_ANALYZE_TOP = 0,
+  H264LYZE_OPT_TOP = 0,
   H264LYZE_OPT_STATS,
   H264LYZE_OPT_FULL,
   H264LYZE_OPT_TYPE
 };
 
-// Checks user argments and populates h264 object accordingly
+// Generates h264 output
+int h264lyze_process(h264lyze_t *h264lyze)
+{
+  int status = 0;
+  FILE* infile = NULL;
+  uint8_t* buf = NULL;
+  h264_stream_t* h = NULL;
+  int opt_verbose = 1;
+  int opt_probe = 0;
+
+  buf = (uint8_t*)malloc( BUFSIZE );
+  if (buf == NULL) {
+    printf("!! Error: Alloc for buffer failed\n");
+    return EXIT_FAILURE;
+  }
+
+  h = h264_new();
+  if (h == NULL) {
+    printf("!! Error: Alloc for h264 object failed\n");
+    return EXIT_FAILURE;
+  }
+
+
+  infile = fopen(h264lyze->infile, "rb");
+  // TODO: Check fopen return code
+  uint8_t* p = buf;
+  int64_t off = 0;
+  size_t rsz = 0;
+  size_t sz = 0;
+  int nal_start;
+  int nal_end;
+  uint32_t nal_num = 0;
+  int64_t nal_size = 0;
+  int64_t nal_off = 0;
+
+  while (1)
+  {
+      rsz = fread(buf + sz, 1, BUFSIZE - sz, infile);
+      if (rsz == 0) {
+          if (ferror(infile)) {
+            printf( "!! Error: read failed: %s \n", strerror(errno));
+            break;
+          }
+          break;  // if (feof(infile))
+      }
+      sz += rsz;
+
+      while (find_nal_unit(p, sz, &nal_start, &nal_end) > 0)
+      {
+          nal_num++;
+          p += nal_start;
+          // h264lyze_nal_unit_type_get
+          h264lyze_read_debug_nal_unit (h, p, nal_end - nal_start);
+
+          if ( h264lyze->option == H264LYZE_OPT_TOP || h264lyze->option == H264LYZE_OPT_FULL ) {
+            // Num NAL Type Offset Size Accum
+             printf(  ">> %u NAL: addr 0X%04llX size %lld type %u\n",
+                      nal_num,
+                      (long long int)(off + (p - buf) + nal_start),
+                      (long long int)(nal_end - nal_start), h->nal->nal_unit_type);
+          }
+
+          if ( h264lyze->option == H264LYZE_OPT_FULL ) {
+            read_debug_nal_unit (h, p, nal_end - nal_start);
+          }
+
+          p += (nal_end - nal_start);
+          sz -= nal_end;
+      }
+
+      // if no NALs found in buffer, discard it
+      if (p == buf) {
+          printf(  "(No NAL (0x%04llX) (0x%04llX). Discard\n",
+                   (long long int)off,
+                   (long long int)off + sz);
+
+          p = buf + sz;
+          sz = 0;
+      }
+
+      memmove(buf, p, sz);
+      off += p - buf;
+      p = buf;
+  }
+
+  h264_free(h);
+  free(buf);
+  fclose(h264_dbgfile);
+  fclose(infile);
+}
+
+// Checks user argments and populates h264 object
 int h264lyze_input_check(int argc, char *argv[], h264lyze_t *h264lyze)
 {
   int status = 0;
-  const char *filename = NULL;
+  const char *infile = NULL;
 
   // Check if user supplies minimum arg (h264 file)
   if (argc < H264LYZE_MIN_ARGC) {
@@ -76,15 +167,15 @@ int h264lyze_input_check(int argc, char *argv[], h264lyze_t *h264lyze)
   }
 
   // Checking argv1 as h264 file
-  filename = argv[1];
-  status = access(filename, F_OK);
+  infile = argv[1];
+  status = access(infile, F_OK);
   if ( status != 0 ) {
-    printf("Error: Couldn't locate %s file\n", filename);
+    printf("Error: File locate %s failed\n", infile);
     h264lyze_usage();
     return EXIT_FAILURE;
   } else {
     // Populate h264 object
-    h264lyze->filename = filename;
+    h264lyze->infile = infile;
   }
 
   // Checking argv2 as option/mode, if option is valid populate h264 object
@@ -109,7 +200,7 @@ int h264lyze_input_check(int argc, char *argv[], h264lyze_t *h264lyze)
       return EXIT_FAILURE;
     }
   } else {
-    h264lyze->option = H264_ANALYZE_TOP;
+    h264lyze->option = H264LYZE_OPT_TOP;
   }
 
   return status;
@@ -122,5 +213,7 @@ int main(int argc, char *argv[])
   status = h264lyze_input_check(argc, argv, &h264lyze);
   if (status) return status;
 
-return 0;
+  status = h264lyze_process(&h264lyze);
+
+  return status;
 }
