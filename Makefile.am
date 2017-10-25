@@ -4,15 +4,15 @@ ACLOCAL_AMFLAGS = -I m4
 AM_CFLAGS = -I. -Wall -std=c99 $(EXTRA_CFLAGS)
 AM_LDFLAGS = -lm
 
-bin_PROGRAMS = h264_analyze svc_split
+bin_PROGRAMS = h264lyze svc_split
 
 lib_LTLIBRARIES = libh264bitstream.la
 
 libh264bitstream_la_LDFLAGS = -no-undefined
 libh264bitstream_la_SOURCES = h264_stream.c h264_sei.c h264_nal.c
 
-h264_analyze_SOURCES = h264_analyze.c
-h264_analyze_LDADD = libh264bitstream.la
+h264lyze_SOURCES = h264lyze.c
+h264lyze_LDADD = libh264bitstream.la
 
 svc_split_SOURCES = svc_split.c
 svc_split_LDADD = libh264bitstream.la
