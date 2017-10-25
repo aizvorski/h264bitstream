@@ -37,10 +37,10 @@
 static char h264lyze_options[] =
 "\t (null): high level h264 parse\n"
 "\t --full: high & low level h264 parse\n"
-"\t --type <t>: NALU type t parse\n";
-//"\t --unit <n>: NALU n parse\n";
-//"\t --stats: high level h264 stats\n";
-//"\t --plot: plot compatible output\n";
+"\t --type <t>: NALU type t parse\n"
+"\t --unit <n>: NALU n parse\n"
+"\t --compact: plot compatible output\n"
+"\t --stats: high level h264 stats\n";
 
 // Prints program usage
 void h264lyze_usage()
@@ -56,8 +56,10 @@ void h264lyze_usage()
 
 // Internal h264lyze object type
 typedef struct h264lyze {
-  char *infile;
-  uint8_t option
+  const char *infile;
+  uint8_t option;
+  uint8_t nalu_type;
+  uint64_t nalu_num
 } h264lyze_t;
 
 // h264lyze user option enum
@@ -66,6 +68,7 @@ enum h264lyze_user_opt {
   H264LYZE_OPT_FULL,
   H264LYZE_OPT_TYPE,
   H264LYZE_OPT_UNIT,
+  H264LYZE_OPT_COMPACT,
   H264LYZE_OPT_STATS
 };
 
@@ -83,7 +86,7 @@ int h264lyze_nal_unit_type_get(h264_stream_t* h, uint8_t* buf, int size)
     }
 
     bs_t* b = bs_new(rbsp_buf, rbsp_size);
-    int forbidden_zero_bit = bs_read_u(b, 1);
+    bs_read_u(b, 1);
     nal->nal_ref_idc = bs_read_u(b, 2);
     nal->nal_unit_type = bs_read_u(b, 5);
     if (bs_overrun(b)) {
@@ -151,11 +154,44 @@ int h264lyze_process(h264lyze_t *h264lyze)
           switch(h264lyze->option) {
 
             case H264LYZE_OPT_FULL: {
-              printf(">> %u NAL: addr 0X%04llX size %lld type %u\n",
+              printf("\n%u NAL: addr 0X%04llX size %lld type %u\n",
                      nal_num,
                      (long long int)(off + (p - buf) + nal_start),
                      (long long int)(nal_end - nal_start), h->nal->nal_unit_type);
               read_debug_nal_unit (h, p, nal_end - nal_start);
+              break;
+            }
+
+            case H264LYZE_OPT_TYPE: {
+              if (h->nal->nal_unit_type == h264lyze->nalu_type) {
+                printf("\n%u NAL: addr 0X%04llX size %lld TYPE %u\n",
+                       nal_num,
+                       (long long int)(off + (p - buf) + nal_start),
+                       (long long int)(nal_end - nal_start),
+                       h->nal->nal_unit_type);
+                read_debug_nal_unit (h, p, nal_end - nal_start);
+              }
+              break;
+            }
+
+            case H264LYZE_OPT_UNIT: {
+              if (nal_num == h264lyze->nalu_num) {
+                printf("\n%u NAL: addr 0X%04llX size %lld type %u\n",
+                       nal_num,
+                       (long long int)(off + (p - buf) + nal_start),
+                       (long long int)(nal_end - nal_start),
+                       h->nal->nal_unit_type);
+                read_debug_nal_unit (h, p, nal_end - nal_start);
+              }
+              break;
+            }
+
+            case H264LYZE_OPT_COMPACT: {
+              printf("%u %lld %lld %u\n",
+                     nal_num,
+                     (long long int)(off + (p - buf) + nal_start),
+                     (long long int)(nal_end - nal_start),
+                     h->nal->nal_unit_type);
               break;
             }
 
@@ -164,7 +200,8 @@ int h264lyze_process(h264lyze_t *h264lyze)
                printf("%u NAL: addr 0X%04llX size %lld type %u\n",
                       nal_num,
                       (long long int)(off + (p - buf) + nal_start),
-                      (long long int)(nal_end - nal_start), h->nal->nal_unit_type);
+                      (long long int)(nal_end - nal_start),
+                      h->nal->nal_unit_type);
               break;
           }
 
@@ -223,19 +260,41 @@ int h264lyze_input_check(int argc, char *argv[], h264lyze_t *h264lyze)
       h264lyze->option = H264LYZE_OPT_FULL;
       return status;
     }
+
     status = strcmp(argv[2],"--type");
     if (status == 0) {
       h264lyze->option = H264LYZE_OPT_TYPE;
-      printf("Option %s currently not supported\n", argv[2]);
-      h264lyze_usage();
-      return EXIT_FAILURE;
+      if (argc > 3) {
+        char *p;
+        long conv = strtol(argv[3], &p, 10);
+        h264lyze->nalu_type = (uint8_t)conv;
+      } else {
+        printf("Error: Invalid NALU type\n");
+        h264lyze_usage();
+        return EXIT_FAILURE;
+      }
+      return status;
     }
+
     status = strcmp(argv[2],"--unit");
     if (status == 0) {
       h264lyze->option = H264LYZE_OPT_UNIT;
-      printf("Option %s currently not supported\n", argv[2]);
-      h264lyze_usage();
-      return EXIT_FAILURE;
+      if (argc > 3) {
+        char *p;
+        long conv = strtol(argv[3], &p, 10);
+        h264lyze->nalu_num = (uint64_t)conv;
+      } else {
+        printf("Error: Invalid NALU number)\n");
+        h264lyze_usage();
+        return EXIT_FAILURE;
+      }
+      return status;
+    }
+
+    status = strcmp(argv[2],"--compact");
+    if (status == 0) {
+      h264lyze->option = H264LYZE_OPT_COMPACT;
+      return status;
     }
 
     status = strcmp(argv[2],"--stats");
@@ -243,7 +302,7 @@ int h264lyze_input_check(int argc, char *argv[], h264lyze_t *h264lyze)
       h264lyze->option = H264LYZE_OPT_STATS;
       printf("Option %s currently not supported\n", argv[2]);
       h264lyze_usage();
-      return status;
+      return EXIT_FAILURE;
     } else {
       printf("Error: Invalid option %s\n", argv[2]);
       h264lyze_usage();
