@@ -4120,3 +4120,120 @@ void read_debug_dec_ref_base_pic_marking(nal_t* nal, bs_t* b)
     }
 }
 
+void debug_sps(sps_t* sps)
+{
+    printf("======= SPS =======\n");
+    printf(" profile_idc : %d \n", sps->profile_idc );
+    printf(" constraint_set0_flag : %d \n", sps->constraint_set0_flag );
+    printf(" constraint_set1_flag : %d \n", sps->constraint_set1_flag );
+    printf(" constraint_set2_flag : %d \n", sps->constraint_set2_flag );
+    printf(" constraint_set3_flag : %d \n", sps->constraint_set3_flag );
+    printf(" constraint_set4_flag : %d \n", sps->constraint_set4_flag );
+    printf(" constraint_set5_flag : %d \n", sps->constraint_set5_flag );
+    printf(" reserved_zero_2bits : %d \n", sps->reserved_zero_2bits );
+    printf(" level_idc : %d \n", sps->level_idc );
+    printf(" seq_parameter_set_id : %d \n", sps->seq_parameter_set_id );
+    printf(" chroma_format_idc : %d \n", sps->chroma_format_idc );
+    printf(" residual_colour_transform_flag : %d \n", sps->residual_colour_transform_flag );
+    printf(" bit_depth_luma_minus8 : %d \n", sps->bit_depth_luma_minus8 );
+    printf(" bit_depth_chroma_minus8 : %d \n", sps->bit_depth_chroma_minus8 );
+    printf(" qpprime_y_zero_transform_bypass_flag : %d \n", sps->qpprime_y_zero_transform_bypass_flag );
+    printf(" seq_scaling_matrix_present_flag : %d \n", sps->seq_scaling_matrix_present_flag );
+    //  int seq_scaling_list_present_flag[8];
+    //  void* ScalingList4x4[6];
+    //  int UseDefaultScalingMatrix4x4Flag[6];
+    //  void* ScalingList8x8[2];
+    //  int UseDefaultScalingMatrix8x8Flag[2];
+    printf(" log2_max_frame_num_minus4 : %d \n", sps->log2_max_frame_num_minus4 );
+    printf(" pic_order_cnt_type : %d \n", sps->pic_order_cnt_type );
+    printf("   log2_max_pic_order_cnt_lsb_minus4 : %d \n", sps->log2_max_pic_order_cnt_lsb_minus4 );
+    printf("   delta_pic_order_always_zero_flag : %d \n", sps->delta_pic_order_always_zero_flag );
+    printf("   offset_for_non_ref_pic : %d \n", sps->offset_for_non_ref_pic );
+    printf("   offset_for_top_to_bottom_field : %d \n", sps->offset_for_top_to_bottom_field );
+    printf("   num_ref_frames_in_pic_order_cnt_cycle : %d \n", sps->num_ref_frames_in_pic_order_cnt_cycle );
+    //  int offset_for_ref_frame[256];
+    printf(" num_ref_frames : %d \n", sps->num_ref_frames );
+    printf(" gaps_in_frame_num_value_allowed_flag : %d \n", sps->gaps_in_frame_num_value_allowed_flag );
+    printf(" pic_width_in_mbs_minus1 : %d \n", sps->pic_width_in_mbs_minus1 );
+    printf(" pic_height_in_map_units_minus1 : %d \n", sps->pic_height_in_map_units_minus1 );
+    printf(" frame_mbs_only_flag : %d \n", sps->frame_mbs_only_flag );
+    printf(" mb_adaptive_frame_field_flag : %d \n", sps->mb_adaptive_frame_field_flag );
+    printf(" direct_8x8_inference_flag : %d \n", sps->direct_8x8_inference_flag );
+    printf(" frame_cropping_flag : %d \n", sps->frame_cropping_flag );
+    printf("   frame_crop_left_offset : %d \n", sps->frame_crop_left_offset );
+    printf("   frame_crop_right_offset : %d \n", sps->frame_crop_right_offset );
+    printf("   frame_crop_top_offset : %d \n", sps->frame_crop_top_offset );
+    printf("   frame_crop_bottom_offset : %d \n", sps->frame_crop_bottom_offset );
+    printf(" vui_parameters_present_flag : %d \n", sps->vui_parameters_present_flag );
+
+    printf("=== VUI ===\n");
+    printf(" aspect_ratio_info_present_flag : %d \n", sps->vui.aspect_ratio_info_present_flag );
+    printf("   aspect_ratio_idc : %d \n", sps->vui.aspect_ratio_idc );
+    printf("     sar_width : %d \n", sps->vui.sar_width );
+    printf("     sar_height : %d \n", sps->vui.sar_height );
+    printf(" overscan_info_present_flag : %d \n", sps->vui.overscan_info_present_flag );
+    printf("   overscan_appropriate_flag : %d \n", sps->vui.overscan_appropriate_flag );
+    printf(" video_signal_type_present_flag : %d \n", sps->vui.video_signal_type_present_flag );
+    printf("   video_format : %d \n", sps->vui.video_format );
+    printf("   video_full_range_flag : %d \n", sps->vui.video_full_range_flag );
+    printf("   colour_description_present_flag : %d \n", sps->vui.colour_description_present_flag );
+    printf("     colour_primaries : %d \n", sps->vui.colour_primaries );
+    printf("   transfer_characteristics : %d \n", sps->vui.transfer_characteristics );
+    printf("   matrix_coefficients : %d \n", sps->vui.matrix_coefficients );
+    printf(" chroma_loc_info_present_flag : %d \n", sps->vui.chroma_loc_info_present_flag );
+    printf("   chroma_sample_loc_type_top_field : %d \n", sps->vui.chroma_sample_loc_type_top_field );
+    printf("   chroma_sample_loc_type_bottom_field : %d \n", sps->vui.chroma_sample_loc_type_bottom_field );
+    printf(" timing_info_present_flag : %d \n", sps->vui.timing_info_present_flag );
+    printf("   num_units_in_tick : %d \n", sps->vui.num_units_in_tick );
+    printf("   time_scale : %d \n", sps->vui.time_scale );
+    printf("   fixed_frame_rate_flag : %d \n", sps->vui.fixed_frame_rate_flag );
+    printf(" nal_hrd_parameters_present_flag : %d \n", sps->vui.nal_hrd_parameters_present_flag );
+    printf(" vcl_hrd_parameters_present_flag : %d \n", sps->vui.vcl_hrd_parameters_present_flag );
+    printf("   low_delay_hrd_flag : %d \n", sps->vui.low_delay_hrd_flag );
+    printf(" pic_struct_present_flag : %d \n", sps->vui.pic_struct_present_flag );
+    printf(" bitstream_restriction_flag : %d \n", sps->vui.bitstream_restriction_flag );
+    printf("   motion_vectors_over_pic_boundaries_flag : %d \n", sps->vui.motion_vectors_over_pic_boundaries_flag );
+    printf("   max_bytes_per_pic_denom : %d \n", sps->vui.max_bytes_per_pic_denom );
+    printf("   max_bits_per_mb_denom : %d \n", sps->vui.max_bits_per_mb_denom );
+    printf("   log2_max_mv_length_horizontal : %d \n", sps->vui.log2_max_mv_length_horizontal );
+    printf("   log2_max_mv_length_vertical : %d \n", sps->vui.log2_max_mv_length_vertical );
+    printf("   num_reorder_frames : %d \n", sps->vui.num_reorder_frames );
+    printf("   max_dec_frame_buffering : %d \n", sps->vui.max_dec_frame_buffering );
+}
+
+
+void debug_pps(pps_t* pps)
+{
+    printf("======= PPS =======\n");
+    printf(" pic_parameter_set_id : %d \n", pps->pic_parameter_set_id );
+    printf(" seq_parameter_set_id : %d \n", pps->seq_parameter_set_id );
+    printf(" entropy_coding_mode_flag : %d \n", pps->entropy_coding_mode_flag );
+    printf(" pic_order_present_flag : %d \n", pps->pic_order_present_flag );
+    printf(" num_slice_groups_minus1 : %d \n", pps->num_slice_groups_minus1 );
+    printf(" slice_group_map_type : %d \n", pps->slice_group_map_type );
+    //  int run_length_minus1[8]; // up to num_slice_groups_minus1, which is <= 7 in Baseline and Extended, 0 otheriwse
+    //  int top_left[8];
+    //  int bottom_right[8];
+    //  int slice_group_change_direction_flag;
+    //  int slice_group_change_rate_minus1;
+    //  int pic_size_in_map_units_minus1;
+    //  int slice_group_id[256]; // FIXME what size?
+    printf(" num_ref_idx_l0_active_minus1 : %d \n", pps->num_ref_idx_l0_active_minus1 );
+    printf(" num_ref_idx_l1_active_minus1 : %d \n", pps->num_ref_idx_l1_active_minus1 );
+    printf(" weighted_pred_flag : %d \n", pps->weighted_pred_flag );
+    printf(" weighted_bipred_idc : %d \n", pps->weighted_bipred_idc );
+    printf(" pic_init_qp_minus26 : %d \n", pps->pic_init_qp_minus26 );
+    printf(" pic_init_qs_minus26 : %d \n", pps->pic_init_qs_minus26 );
+    printf(" chroma_qp_index_offset : %d \n", pps->chroma_qp_index_offset );
+    printf(" deblocking_filter_control_present_flag : %d \n", pps->deblocking_filter_control_present_flag );
+    printf(" constrained_intra_pred_flag : %d \n", pps->constrained_intra_pred_flag );
+    printf(" redundant_pic_cnt_present_flag : %d \n", pps->redundant_pic_cnt_present_flag );
+    printf(" transform_8x8_mode_flag : %d \n", pps->transform_8x8_mode_flag );
+    printf(" pic_scaling_matrix_present_flag : %d \n", pps->pic_scaling_matrix_present_flag );
+    //  int pic_scaling_list_present_flag[8];
+    //  void* ScalingList4x4[6];
+    //  int UseDefaultScalingMatrix4x4Flag[6];
+    //  void* ScalingList8x8[2];
+    //  int UseDefaultScalingMatrix8x8Flag[2];
+    printf(" second_chroma_qp_index_offset : %d \n", pps->second_chroma_qp_index_offset );
+}
