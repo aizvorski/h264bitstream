@@ -13,6 +13,7 @@ build-aux
 config.*
 configure
 h264_analyze
+svc_split
 libtool
 m4/libtool.m4
 m4/lt*
