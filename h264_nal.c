@@ -88,6 +88,7 @@ void h264_free(h264_stream_t* h)
     }
     for ( int i = 0; i < 256; i++ ) { free( h->pps_table[i] ); }
 
+    free(h->pps);
     free(h->aud);
     if(h->seis != NULL)
     {
@@ -101,9 +102,19 @@ void h264_free(h264_stream_t* h)
     free(h->sh);
     
     if (h->sh_svc_ext != NULL) free(h->sh_svc_ext);
-    
+
+    if (h->slice_data != NULL)
+    {
+        if (h->slice_data->rbsp_buf != NULL)
+        {
+            free(h->slice_data->rbsp_buf);
+        }
+
+        free(h->slice_data);
+    }
+
     free(h->sps);
-    
+
     free(h->sps_subset->sps);
     free(h->sps_subset->sps_svc_ext);
     free(h->sps_subset);
