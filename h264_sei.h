@@ -110,7 +110,7 @@ typedef struct
 
 #define MAX_LENGTH 128
 
-typedef  sei_scalability_priority_layer_info_t;
+// typedef  sei_scalability_priority_layer_info_t;
 
 typedef struct
 {

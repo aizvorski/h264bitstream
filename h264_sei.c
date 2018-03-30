@@ -259,7 +259,7 @@ void read_sei_payload( h264_stream_t* h, bs_t* b )
         case SEI_TYPE_SCALABILITY_INFO:
             if( 1 )
             {
-                s->sei_svc = (uint8_t*)calloc( 1, sizeof(sei_scalability_info_t) );
+                s->sei_svc = (sei_scalability_info_t*)calloc( 1, sizeof(sei_scalability_info_t) );
             }
             read_sei_scalability_info( h, b );
             break;
@@ -466,7 +466,7 @@ void write_sei_payload( h264_stream_t* h, bs_t* b )
         case SEI_TYPE_SCALABILITY_INFO:
             if( 0 )
             {
-                s->sei_svc = (uint8_t*)calloc( 1, sizeof(sei_scalability_info_t) );
+                s->sei_svc = (sei_scalability_info_t*)calloc( 1, sizeof(sei_scalability_info_t) );
             }
             write_sei_scalability_info( h, b );
             break;
@@ -673,7 +673,7 @@ void read_debug_sei_payload( h264_stream_t* h, bs_t* b )
         case SEI_TYPE_SCALABILITY_INFO:
             if( 1 )
             {
-                s->sei_svc = (uint8_t*)calloc( 1, sizeof(sei_scalability_info_t) );
+                s->sei_svc = (sei_scalability_info_t*)calloc( 1, sizeof(sei_scalability_info_t) );
             }
             read_debug_sei_scalability_info( h, b );
             break;
