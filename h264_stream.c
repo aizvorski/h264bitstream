@@ -1337,7 +1337,7 @@ void read_slice_header_in_scalable_extension(h264_stream_t* h, bs_t* b)
                 if( ( nal->nal_svc_ext->use_ref_base_pic_flag || sh_svc_ext->store_ref_base_pic_flag ) &&
                    ( nal->nal_unit_type != 5 ) )
                 {
-                    read_dec_ref_base_pic_marking(h, b);
+                    read_dec_ref_base_pic_marking(nal, b);
                 }
             }
         }
@@ -2666,7 +2666,7 @@ void write_slice_header_in_scalable_extension(h264_stream_t* h, bs_t* b)
                 if( ( nal->nal_svc_ext->use_ref_base_pic_flag || sh_svc_ext->store_ref_base_pic_flag ) &&
                    ( nal->nal_unit_type != 5 ) )
                 {
-                    write_dec_ref_base_pic_marking(h, b);
+                    write_dec_ref_base_pic_marking(nal, b);
                 }
             }
         }
@@ -4003,7 +4003,7 @@ void read_debug_slice_header_in_scalable_extension(h264_stream_t* h, bs_t* b)
                 if( ( nal->nal_svc_ext->use_ref_base_pic_flag || sh_svc_ext->store_ref_base_pic_flag ) &&
                    ( nal->nal_unit_type != 5 ) )
                 {
-                    read_debug_dec_ref_base_pic_marking(h, b);
+                    read_debug_dec_ref_base_pic_marking(nal, b);
                 }
             }
         }
