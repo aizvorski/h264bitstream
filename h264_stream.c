@@ -577,12 +577,12 @@ void read_svc_vui_parameters_extension(sps_svc_ext_t* sps_svc_ext, bs_t* b)
         sps_svc_ext->vui.vui_ext_nal_hrd_parameters_present_flag[i] = bs_read_u1(b);
         if( sps_svc_ext->vui.vui_ext_nal_hrd_parameters_present_flag[i] )
         {
-            read_hrd_parameters(&sps_svc_ext->hrd_vcl, b);
+            read_hrd_parameters(&sps_svc_ext->hrd_vcl[i], b);
         }
         sps_svc_ext->vui.vui_ext_vcl_hrd_parameters_present_flag[i] = bs_read_u1(b);
         if( sps_svc_ext->vui.vui_ext_vcl_hrd_parameters_present_flag[i] )
         {
-            read_hrd_parameters(&sps_svc_ext->hrd_nal, b);
+            read_hrd_parameters(&sps_svc_ext->hrd_nal[i], b);
         }
         
         if( sps_svc_ext->vui.vui_ext_nal_hrd_parameters_present_flag[i] ||
@@ -1906,12 +1906,12 @@ void write_svc_vui_parameters_extension(sps_svc_ext_t* sps_svc_ext, bs_t* b)
         bs_write_u1(b, sps_svc_ext->vui.vui_ext_nal_hrd_parameters_present_flag[i]);
         if( sps_svc_ext->vui.vui_ext_nal_hrd_parameters_present_flag[i] )
         {
-            write_hrd_parameters(&sps_svc_ext->hrd_vcl, b);
+            write_hrd_parameters(&sps_svc_ext->hrd_vcl[i], b);
         }
         bs_write_u1(b, sps_svc_ext->vui.vui_ext_vcl_hrd_parameters_present_flag[i]);
         if( sps_svc_ext->vui.vui_ext_vcl_hrd_parameters_present_flag[i] )
         {
-            write_hrd_parameters(&sps_svc_ext->hrd_nal, b);
+            write_hrd_parameters(&sps_svc_ext->hrd_nal[i], b);
         }
         
         if( sps_svc_ext->vui.vui_ext_nal_hrd_parameters_present_flag[i] ||
@@ -3235,12 +3235,12 @@ void read_debug_svc_vui_parameters_extension(sps_svc_ext_t* sps_svc_ext, bs_t* b
         printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sps_svc_ext->vui.vui_ext_nal_hrd_parameters_present_flag[i] = bs_read_u1(b); printf("sps_svc_ext->vui.vui_ext_nal_hrd_parameters_present_flag[i]: %d \n", sps_svc_ext->vui.vui_ext_nal_hrd_parameters_present_flag[i]); 
         if( sps_svc_ext->vui.vui_ext_nal_hrd_parameters_present_flag[i] )
         {
-            read_debug_hrd_parameters(&sps_svc_ext->hrd_vcl, b);
+            read_debug_hrd_parameters(&sps_svc_ext->hrd_vcl[i], b);
         }
         printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sps_svc_ext->vui.vui_ext_vcl_hrd_parameters_present_flag[i] = bs_read_u1(b); printf("sps_svc_ext->vui.vui_ext_vcl_hrd_parameters_present_flag[i]: %d \n", sps_svc_ext->vui.vui_ext_vcl_hrd_parameters_present_flag[i]); 
         if( sps_svc_ext->vui.vui_ext_vcl_hrd_parameters_present_flag[i] )
         {
-            read_debug_hrd_parameters(&sps_svc_ext->hrd_nal, b);
+            read_debug_hrd_parameters(&sps_svc_ext->hrd_nal[i], b);
         }
         
         if( sps_svc_ext->vui.vui_ext_nal_hrd_parameters_present_flag[i] ||
