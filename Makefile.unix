@@ -16,14 +16,14 @@ BINARIES = h264_analyze
 
 all: libh264bitstream.a $(BINARIES)
 
-h264_slice_data.c: h264_slice_data.in.c process.pl
-	perl process.pl > h264_slice_data.c < h264_slice_data.in.c
+# h264_slice_data.c: h264_slice_data.in.c process.pl
+# 	perl process.pl > h264_slice_data.c < h264_slice_data.in.c
 
-h264_stream.c: h264_stream.in.c process.pl
-	perl process.pl > h264_stream.c < h264_stream.in.c
+# h264_stream.c: h264_stream.in.c process.pl
+# 	perl process.pl > h264_stream.c < h264_stream.in.c
 
-h264_sei.c: h264_sei.in.c process.pl
-	perl process.pl > h264_sei.c < h264_sei.in.c
+# h264_sei.c: h264_sei.in.c process.pl
+# 	perl process.pl > h264_sei.c < h264_sei.in.c
 
 h264_analyze: h264_analyze.o libh264bitstream.a
 	$(LD) $(LDFLAGS) -o h264_analyze h264_analyze.o -L. -lh264bitstream -lm
@@ -48,3 +48,10 @@ dist: clean
 	tar czf ../h264bitstream-$(VERSION).tar.gz h264bitstream-$(VERSION)
 	rm -rf h264bitstream-$(VERSION)
 
+test:
+	./h264_analyze samples/JM_cqm_cabac.264 > tmp1.out
+	diff -u samples/JM_cqm_cabac.out tmp1.out
+	./h264_analyze samples/x264_test.264 > tmp2.out
+	diff -u samples/x264_test.out tmp2.out
+	./h264_analyze samples/riverbed-II-360p-48961.264 > tmp3.out
+	diff -u samples/riverbed-II-360p-48961.out tmp3.out
