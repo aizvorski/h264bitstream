@@ -64,11 +64,11 @@ int main(int argc, char *argv[])
 {
     FILE* infile;
 
+    if (argc < 2) { usage(); return EXIT_FAILURE; }
+
     uint8_t* buf = (uint8_t*)malloc( BUFSIZE );
 
     h264_stream_t* h = h264_new();
-
-    if (argc < 2) { usage(); return EXIT_FAILURE; }
 
     int opt_verbose = 1;
     int opt_probe = 0;
