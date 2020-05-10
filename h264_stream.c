@@ -1610,6 +1610,8 @@ int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
         case NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_B: 
         case NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_C:
         default:
+            bs_free(b);
+            free(rbsp_buf);
             return -1;
     }
 
@@ -2939,6 +2941,8 @@ int read_debug_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
         case NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_B: 
         case NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_C:
         default:
+            bs_free(b);
+            free(rbsp_buf);
             return -1;
     }
 
