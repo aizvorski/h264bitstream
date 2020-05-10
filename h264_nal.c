@@ -139,35 +139,32 @@ int find_nal_unit(uint8_t* buf, int size, int* nal_start, int* nal_end)
     *nal_end = 0;
     
     i = 0;
-    while (   //( next_bits( 24 ) != 0x000001 && next_bits( 32 ) != 0x00000001 )
-        (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0x01) && 
-        (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0 || buf[i+3] != 0x01) 
-        )
-    {
-        i++; // skip leading zero
-        if (i+4 >= size) { return 0; } // did not find nal start
-    }
 
-    if  (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0x01) // ( next_bits( 24 ) != 0x000001 )
-    {
-        i++;
-    }
+    static const uint8_t bits24_0[] = { 0x0, 0x0, 0x0 };
+    static const uint8_t bits24_1[] = { 0x0, 0x0, 0x1 };
+    static const uint8_t bits32_1[] = { 0x0, 0x0, 0x0, 0x1 };
 
-    if  (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0x01) { /* error, should never happen */ return 0; }
-    i+= 3;
+    for (; i < size; ++i) { //( next_bits( 24 ) != 0x000001 && next_bits( 32 ) != 0x00000001 )
+        if (i + sizeof(bits24_1) <= size && 0==memcmp(buf+i, bits24_1, sizeof(bits24_1))) {
+            i += sizeof(bits24_1);
+            break;
+        }
+        if (i + sizeof(bits32_1) <= size && 0==memcmp(buf+i, bits32_1, sizeof(bits32_1))) {
+            i += sizeof(bits32_1);
+            break;
+        }
+    }
+    if (i >= size) { return -1; } // did not find nal start
     *nal_start = i;
-    
-    while (   //( next_bits( 24 ) != 0x000000 && next_bits( 24 ) != 0x000001 )
-        (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0) && 
-        (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0x01) 
-        )
-    {
-        i++;
-        // FIXME the next line fails when reading a nal that ends exactly at the end of the data
-        if (i+3 >= size) { *nal_end = size; return -1; } // did not find nal end, stream ended first
+
+    for (++i; i < size; ++i) { //( next_bits( 24 ) != 0x000000 && next_bits( 24 ) != 0x000001 )
+        if (i + sizeof(bits24_0) <= size && 0==memcmp(buf+i, bits24_1, sizeof(bits24_0))) break;
+        if (i + sizeof(bits24_1) <= size && 0==memcmp(buf+i, bits24_1, sizeof(bits24_1))) break;
     }
-    
+
+    if (i >= size) { return -1; } // did not find nal end
     *nal_end = i;
+
     return (*nal_end - *nal_start);
 }
 

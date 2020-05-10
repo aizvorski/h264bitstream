@@ -220,6 +220,7 @@ int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
             
             if( 1 )
             {
+                if (h->sps->seq_parameter_set_id < 0 || h->sps->seq_parameter_set_id >= 32) { bs_free(b); free(rbsp_buf); return -1; }
                 memcpy(h->sps_table[h->sps->seq_parameter_set_id], h->sps, sizeof(sps_t));
             }
 
@@ -252,10 +253,12 @@ int read_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
             
             if( 1 )
             {
-                memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id], h->sps_subset, sizeof(sps_subset_t));
-                //memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->sps, h->sps_subset->sps, sizeof(sps_t));
-                //memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->sps_svc_ext, h->sps_subset->sps_svc_ext, sizeof(sps_svc_ext_t));
-                //h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->additional_extension2_flag = h->sps_subset->additional_extension2_flag;
+                if (0 <= h->sps_subset->sps->seq_parameter_set_id && h->sps_subset->sps->seq_parameter_set_id < 32) {
+                    //memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id], h->sps_subset, sizeof(sps_subset_t));
+                    memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->sps, h->sps_subset->sps, sizeof(sps_t));
+                    memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->sps_svc_ext, h->sps_subset->sps_svc_ext, sizeof(sps_svc_ext_t));
+                    h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->additional_extension2_flag = h->sps_subset->additional_extension2_flag;
+                }
             }
 
             break;
@@ -428,7 +431,11 @@ void read_seq_parameter_set_rbsp(sps_t* sps, bs_t* b)
         sps->num_ref_frames_in_pic_order_cnt_cycle = bs_read_ue(b);
         for( i = 0; i < sps->num_ref_frames_in_pic_order_cnt_cycle; i++ )
         {
-            sps->offset_for_ref_frame[ i ] = bs_read_se(b);
+            if (i < 256) {
+                sps->offset_for_ref_frame[ i ] = bs_read_se(b);
+            } else {
+                bs_read_se(b);
+            }
         }
     }
     sps->num_ref_frames = bs_read_ue(b);
@@ -675,9 +682,15 @@ void read_hrd_parameters(hrd_t* hrd, bs_t* b)
     hrd->cpb_size_scale = bs_read_u(b, 4);
     for( int SchedSelIdx = 0; SchedSelIdx <= hrd->cpb_cnt_minus1; SchedSelIdx++ )
     {
-        hrd->bit_rate_value_minus1[ SchedSelIdx ] = bs_read_ue(b);
-        hrd->cpb_size_value_minus1[ SchedSelIdx ] = bs_read_ue(b);
-        hrd->cbr_flag[ SchedSelIdx ] = bs_read_u1(b);
+        if (SchedSelIdx < 32) {
+            hrd->bit_rate_value_minus1[ SchedSelIdx ] = bs_read_ue(b);
+            hrd->cpb_size_value_minus1[ SchedSelIdx ] = bs_read_ue(b);
+            hrd->cbr_flag[ SchedSelIdx ] = bs_read_u1(b);
+        } else {
+            bs_read_ue(b);
+            bs_read_ue(b);
+            bs_read_u1(b);
+        }
     }
     hrd->initial_cpb_removal_delay_length_minus1 = bs_read_u(b, 5);
     hrd->cpb_removal_delay_length_minus1 = bs_read_u(b, 5);
@@ -725,7 +738,11 @@ void read_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
         {
             for( int i_group = 0; i_group <= pps->num_slice_groups_minus1; i_group++ )
             {
-                pps->run_length_minus1[ i_group ] = bs_read_ue(b);
+                if (i_group < 8) {
+                    pps->run_length_minus1[ i_group ] = bs_read_ue(b);
+                } else {
+                    bs_read_ue(b);
+                }
             }
         }
         else if( pps->slice_group_map_type == 2 )
@@ -800,7 +817,8 @@ void read_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
 
     if( 1 )
     {
-        memcpy(h->pps_table[pps->pic_parameter_set_id], h->pps, sizeof(pps_t));
+        if (0 <= pps->pic_parameter_set_id && pps->pic_parameter_set_id < 256)
+            memcpy(h->pps_table[pps->pic_parameter_set_id], h->pps, sizeof(pps_t));
     }
 }
 
@@ -976,8 +994,11 @@ void read_slice_header(h264_stream_t* h, bs_t* b)
     // TODO check existence, otherwise fail
     pps_t* pps = h->pps;
     sps_t* sps = h->sps;
-    memcpy(h->pps, h->pps_table[sh->pic_parameter_set_id], sizeof(pps_t));
-    memcpy(h->sps, h->sps_table[pps->seq_parameter_set_id], sizeof(sps_t));
+
+    if (0 <= sh->pic_parameter_set_id && sh->pic_parameter_set_id < 255)
+        memcpy(h->pps, h->pps_table[sh->pic_parameter_set_id], sizeof(pps_t));
+    if (0 <= pps->seq_parameter_set_id && pps->seq_parameter_set_id < 32)
+        memcpy(h->sps, h->sps_table[pps->seq_parameter_set_id], sizeof(sps_t));
 
     if (sps->residual_colour_transform_flag)
     {
@@ -1250,10 +1271,14 @@ void read_slice_header_in_scalable_extension(h264_stream_t* h, bs_t* b)
     // TODO check existence, otherwise fail
     pps_t* pps = h->pps;
     sps_subset_t* sps_subset = h->sps_subset;
-    memcpy(h->pps, h->pps_table[sh->pic_parameter_set_id], sizeof(pps_t));
-    memcpy(sps_subset, h->sps_subset_table[pps->seq_parameter_set_id], sizeof(sps_subset_t));
-    //memcpy(h->sps_subset->sps, h->sps_subset_table[pps->seq_parameter_set_id]->sps, sizeof(sps_t));
-    //memcpy(h->sps_subset->sps_svc_ext, h->sps_subset_table[pps->seq_parameter_set_id]->sps_svc_ext, sizeof(sps_svc_ext_t));
+    if (0 <= sh->pic_parameter_set_id && sh->pic_parameter_set_id < 256)
+        memcpy(h->pps, h->pps_table[sh->pic_parameter_set_id], sizeof(pps_t));
+    if (0 <= pps->seq_parameter_set_id && pps->seq_parameter_set_id < 32) {
+        //memcpy(sps_subset, h->sps_subset_table[pps->seq_parameter_set_id], sizeof(sps_subset_t));
+        memcpy(h->sps_subset->sps, h->sps_subset_table[pps->seq_parameter_set_id]->sps, sizeof(sps_t));
+        memcpy(h->sps_subset->sps_svc_ext, h->sps_subset_table[pps->seq_parameter_set_id]->sps_svc_ext, sizeof(sps_svc_ext_t));
+        h->sps_subset->additional_extension2_flag = h->sps_subset_table[pps->seq_parameter_set_id]->additional_extension2_flag;
+    }
     
     if (sps_subset->sps->residual_colour_transform_flag)
     {
@@ -1551,6 +1576,7 @@ int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
             
             if( 0 )
             {
+                if (h->sps->seq_parameter_set_id < 0 || h->sps->seq_parameter_set_id >= 32) { bs_free(b); free(rbsp_buf); return -1; }
                 memcpy(h->sps_table[h->sps->seq_parameter_set_id], h->sps, sizeof(sps_t));
             }
 
@@ -1583,10 +1609,12 @@ int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
             
             if( 0 )
             {
-                memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id], h->sps_subset, sizeof(sps_subset_t));
-                //memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->sps, h->sps_subset->sps, sizeof(sps_t));
-                //memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->sps_svc_ext, h->sps_subset->sps_svc_ext, sizeof(sps_svc_ext_t));
-                //h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->additional_extension2_flag = h->sps_subset->additional_extension2_flag;
+                if (0 <= h->sps_subset->sps->seq_parameter_set_id && h->sps_subset->sps->seq_parameter_set_id < 32) {
+                    //memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id], h->sps_subset, sizeof(sps_subset_t));
+                    memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->sps, h->sps_subset->sps, sizeof(sps_t));
+                    memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->sps_svc_ext, h->sps_subset->sps_svc_ext, sizeof(sps_svc_ext_t));
+                    h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->additional_extension2_flag = h->sps_subset->additional_extension2_flag;
+                }
             }
 
             break;
@@ -1610,6 +1638,8 @@ int write_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
         case NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_B: 
         case NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_C:
         default:
+            bs_free(b);
+            free(rbsp_buf);
             return -1;
     }
 
@@ -2004,9 +2034,11 @@ void write_hrd_parameters(hrd_t* hrd, bs_t* b)
     bs_write_u(b, 4, hrd->cpb_size_scale);
     for( int SchedSelIdx = 0; SchedSelIdx <= hrd->cpb_cnt_minus1; SchedSelIdx++ )
     {
-        bs_write_ue(b, hrd->bit_rate_value_minus1[ SchedSelIdx ]);
-        bs_write_ue(b, hrd->cpb_size_value_minus1[ SchedSelIdx ]);
-        bs_write_u1(b, hrd->cbr_flag[ SchedSelIdx ]);
+        if (SchedSelIdx < 32) {
+            bs_write_ue(b, hrd->bit_rate_value_minus1[ SchedSelIdx ]);
+            bs_write_ue(b, hrd->cpb_size_value_minus1[ SchedSelIdx ]);
+            bs_write_u1(b, hrd->cbr_flag[ SchedSelIdx ]);
+        }
     }
     bs_write_u(b, 5, hrd->initial_cpb_removal_delay_length_minus1);
     bs_write_u(b, 5, hrd->cpb_removal_delay_length_minus1);
@@ -2129,7 +2161,8 @@ void write_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
 
     if( 0 )
     {
-        memcpy(h->pps_table[pps->pic_parameter_set_id], h->pps, sizeof(pps_t));
+        if (0 <= pps->pic_parameter_set_id && pps->pic_parameter_set_id < 256)
+            memcpy(h->pps_table[pps->pic_parameter_set_id], h->pps, sizeof(pps_t));
     }
 }
 
@@ -2305,8 +2338,10 @@ void write_slice_header(h264_stream_t* h, bs_t* b)
     // TODO check existence, otherwise fail
     pps_t* pps = h->pps;
     sps_t* sps = h->sps;
-    memcpy(h->pps, h->pps_table[sh->pic_parameter_set_id], sizeof(pps_t));
-    memcpy(h->sps, h->sps_table[pps->seq_parameter_set_id], sizeof(sps_t));
+    if (0 <= pps->pic_parameter_set_id && pps->pic_parameter_set_id < 256)
+        memcpy(h->pps, h->pps_table[sh->pic_parameter_set_id], sizeof(pps_t));
+    if (0 <= pps->seq_parameter_set_id && pps->seq_parameter_set_id < 32)
+        memcpy(h->sps, h->sps_table[pps->seq_parameter_set_id], sizeof(sps_t));
 
     if (sps->residual_colour_transform_flag)
     {
@@ -2579,10 +2614,14 @@ void write_slice_header_in_scalable_extension(h264_stream_t* h, bs_t* b)
     // TODO check existence, otherwise fail
     pps_t* pps = h->pps;
     sps_subset_t* sps_subset = h->sps_subset;
-    memcpy(h->pps, h->pps_table[sh->pic_parameter_set_id], sizeof(pps_t));
-    memcpy(sps_subset, h->sps_subset_table[pps->seq_parameter_set_id], sizeof(sps_subset_t));
-    //memcpy(h->sps_subset->sps, h->sps_subset_table[pps->seq_parameter_set_id]->sps, sizeof(sps_t));
-    //memcpy(h->sps_subset->sps_svc_ext, h->sps_subset_table[pps->seq_parameter_set_id]->sps_svc_ext, sizeof(sps_svc_ext_t));
+    if (0 <= sh->pic_parameter_set_id && sh->pic_parameter_set_id < 256)
+        memcpy(h->pps, h->pps_table[sh->pic_parameter_set_id], sizeof(pps_t));
+    if (0 <= pps->seq_parameter_set_id && pps->seq_parameter_set_id < 32) {
+        //memcpy(sps_subset, h->sps_subset_table[pps->seq_parameter_set_id], sizeof(sps_subset_t));
+        memcpy(h->sps_subset->sps, h->sps_subset_table[pps->seq_parameter_set_id]->sps, sizeof(sps_t));
+        memcpy(h->sps_subset->sps_svc_ext, h->sps_subset_table[pps->seq_parameter_set_id]->sps_svc_ext, sizeof(sps_svc_ext_t));
+        h->sps_subset->additional_extension2_flag = h->sps_subset_table[pps->seq_parameter_set_id]->additional_extension2_flag;
+    }
     
     if (sps_subset->sps->residual_colour_transform_flag)
     {
@@ -2880,6 +2919,7 @@ int read_debug_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
             
             if( 1 )
             {
+                if (h->sps->seq_parameter_set_id < 0 || h->sps->seq_parameter_set_id >= 32) { bs_free(b); free(rbsp_buf); return -1; }
                 memcpy(h->sps_table[h->sps->seq_parameter_set_id], h->sps, sizeof(sps_t));
             }
 
@@ -2912,10 +2952,12 @@ int read_debug_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
             
             if( 1 )
             {
-                //memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id], h->sps_subset, sizeof(sps_subset_t));
-                memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->sps, h->sps_subset->sps, sizeof(sps_t));
-                memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->sps_svc_ext, h->sps_subset->sps_svc_ext, sizeof(sps_svc_ext_t));
-                h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->additional_extension2_flag = h->sps_subset->additional_extension2_flag;
+                if (0 <= h->sps_subset->sps->seq_parameter_set_id && h->sps_subset->sps->seq_parameter_set_id < 32) {
+                    //memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id], h->sps_subset, sizeof(sps_subset_t));
+                    memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->sps, h->sps_subset->sps, sizeof(sps_t));
+                    memcpy(h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->sps_svc_ext, h->sps_subset->sps_svc_ext, sizeof(sps_svc_ext_t));
+                    h->sps_subset_table[h->sps_subset->sps->seq_parameter_set_id]->additional_extension2_flag = h->sps_subset->additional_extension2_flag;
+                }
             }
 
             break;
@@ -2939,6 +2981,8 @@ int read_debug_nal_unit(h264_stream_t* h, uint8_t* buf, int size)
         case NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_B: 
         case NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_C:
         default:
+            bs_free(b);
+            free(rbsp_buf);
             return -1;
     }
 
@@ -3086,7 +3130,11 @@ void read_debug_seq_parameter_set_rbsp(sps_t* sps, bs_t* b)
         printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sps->num_ref_frames_in_pic_order_cnt_cycle = bs_read_ue(b); printf("sps->num_ref_frames_in_pic_order_cnt_cycle: %d \n", sps->num_ref_frames_in_pic_order_cnt_cycle); 
         for( i = 0; i < sps->num_ref_frames_in_pic_order_cnt_cycle; i++ )
         {
-            printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sps->offset_for_ref_frame[ i ] = bs_read_se(b); printf("sps->offset_for_ref_frame[ i ]: %d \n", sps->offset_for_ref_frame[ i ]); 
+            if (i < 256) {
+                printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sps->offset_for_ref_frame[ i ] = bs_read_se(b); printf("sps->offset_for_ref_frame[ i ]: %d \n", sps->offset_for_ref_frame[ i ]);
+            } else {
+                bs_read_se(b);
+            }
         }
     }
     printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sps->num_ref_frames = bs_read_ue(b); printf("sps->num_ref_frames: %d \n", sps->num_ref_frames); 
@@ -3333,9 +3381,15 @@ void read_debug_hrd_parameters(hrd_t* hrd, bs_t* b)
     printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); hrd->cpb_size_scale = bs_read_u(b, 4); printf("hrd->cpb_size_scale: %d \n", hrd->cpb_size_scale); 
     for( int SchedSelIdx = 0; SchedSelIdx <= hrd->cpb_cnt_minus1; SchedSelIdx++ )
     {
-        printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); hrd->bit_rate_value_minus1[ SchedSelIdx ] = bs_read_ue(b); printf("hrd->bit_rate_value_minus1[ SchedSelIdx ]: %d \n", hrd->bit_rate_value_minus1[ SchedSelIdx ]); 
-        printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); hrd->cpb_size_value_minus1[ SchedSelIdx ] = bs_read_ue(b); printf("hrd->cpb_size_value_minus1[ SchedSelIdx ]: %d \n", hrd->cpb_size_value_minus1[ SchedSelIdx ]); 
-        printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); hrd->cbr_flag[ SchedSelIdx ] = bs_read_u1(b); printf("hrd->cbr_flag[ SchedSelIdx ]: %d \n", hrd->cbr_flag[ SchedSelIdx ]); 
+        if (SchedSelIdx < 32) {
+            printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); hrd->bit_rate_value_minus1[ SchedSelIdx ] = bs_read_ue(b); printf("hrd->bit_rate_value_minus1[ SchedSelIdx ]: %d \n", hrd->bit_rate_value_minus1[ SchedSelIdx ]);
+            printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); hrd->cpb_size_value_minus1[ SchedSelIdx ] = bs_read_ue(b); printf("hrd->cpb_size_value_minus1[ SchedSelIdx ]: %d \n", hrd->cpb_size_value_minus1[ SchedSelIdx ]);
+            printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); hrd->cbr_flag[ SchedSelIdx ] = bs_read_u1(b); printf("hrd->cbr_flag[ SchedSelIdx ]: %d \n", hrd->cbr_flag[ SchedSelIdx ]);
+        } else {
+            bs_read_ue(b);
+            bs_read_ue(b);
+            bs_read_u1(b);
+        }
     }
     printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); hrd->initial_cpb_removal_delay_length_minus1 = bs_read_u(b, 5); printf("hrd->initial_cpb_removal_delay_length_minus1: %d \n", hrd->initial_cpb_removal_delay_length_minus1); 
     printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); hrd->cpb_removal_delay_length_minus1 = bs_read_u(b, 5); printf("hrd->cpb_removal_delay_length_minus1: %d \n", hrd->cpb_removal_delay_length_minus1); 
@@ -3383,15 +3437,24 @@ void read_debug_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
         {
             for( int i_group = 0; i_group <= pps->num_slice_groups_minus1; i_group++ )
             {
-                printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); pps->run_length_minus1[ i_group ] = bs_read_ue(b); printf("pps->run_length_minus1[ i_group ]: %d \n", pps->run_length_minus1[ i_group ]); 
+                if (i_group < 8) {
+                    printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); pps->run_length_minus1[ i_group ] = bs_read_ue(b); printf("pps->run_length_minus1[ i_group ]: %d \n", pps->run_length_minus1[ i_group ]);
+                } else {
+                    bs_read_ue(b);
+                }
             }
         }
         else if( pps->slice_group_map_type == 2 )
         {
             for( int i_group = 0; i_group < pps->num_slice_groups_minus1; i_group++ )
             {
-                printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); pps->top_left[ i_group ] = bs_read_ue(b); printf("pps->top_left[ i_group ]: %d \n", pps->top_left[ i_group ]); 
-                printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); pps->bottom_right[ i_group ] = bs_read_ue(b); printf("pps->bottom_right[ i_group ]: %d \n", pps->bottom_right[ i_group ]); 
+                if (0 <= i_group && i_group < 8) {
+                    printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); pps->top_left[ i_group ] = bs_read_ue(b); printf("pps->top_left[ i_group ]: %d \n", pps->top_left[ i_group ]);
+                    printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); pps->bottom_right[ i_group ] = bs_read_ue(b); printf("pps->bottom_right[ i_group ]: %d \n", pps->bottom_right[ i_group ]);
+                } else {
+                    bs_read_ue(b);
+                    bs_read_ue(b);
+                }
             }
         }
         else if( pps->slice_group_map_type == 3 ||
@@ -3407,7 +3470,11 @@ void read_debug_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
             for( int i = 0; i <= pps->pic_size_in_map_units_minus1; i++ )
             {
                 int v = intlog2( pps->num_slice_groups_minus1 + 1 );
-                printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); pps->slice_group_id[ i ] = bs_read_u(b, v); printf("pps->slice_group_id[ i ]: %d \n", pps->slice_group_id[ i ]); 
+                if (0 <= i && i < 256) {
+                    printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); pps->slice_group_id[ i ] = bs_read_u(b, v); printf("pps->slice_group_id[ i ]: %d \n", pps->slice_group_id[ i ]);
+                } else {
+                    bs_read_u(b, v);
+                }
             }
         }
     }
@@ -3458,7 +3525,8 @@ void read_debug_pic_parameter_set_rbsp(h264_stream_t* h, bs_t* b)
 
     if( 1 )
     {
-        memcpy(h->pps_table[pps->pic_parameter_set_id], h->pps, sizeof(pps_t));
+        if (0 <= pps->pic_parameter_set_id && pps->pic_parameter_set_id < 256)
+            memcpy(h->pps_table[pps->pic_parameter_set_id], h->pps, sizeof(pps_t));
     }
 }
 
@@ -3642,8 +3710,11 @@ void read_debug_slice_header(h264_stream_t* h, bs_t* b)
     // TODO check existence, otherwise fail
     pps_t* pps = h->pps;
     sps_t* sps = h->sps;
-    memcpy(h->pps, h->pps_table[sh->pic_parameter_set_id], sizeof(pps_t));
-    memcpy(h->sps, h->sps_table[pps->seq_parameter_set_id], sizeof(sps_t));
+
+    if (0 <= sh->pic_parameter_set_id && sh->pic_parameter_set_id < 255)
+        memcpy(h->pps, h->pps_table[sh->pic_parameter_set_id], sizeof(pps_t));
+    if (0 <= pps->seq_parameter_set_id && pps->seq_parameter_set_id < 32)
+        memcpy(h->sps, h->sps_table[pps->seq_parameter_set_id], sizeof(sps_t));
 
     if (sps->residual_colour_transform_flag)
     {
@@ -3916,10 +3987,14 @@ void read_debug_slice_header_in_scalable_extension(h264_stream_t* h, bs_t* b)
     // TODO check existence, otherwise fail
     pps_t* pps = h->pps;
     sps_subset_t* sps_subset = h->sps_subset;
-    memcpy(h->pps, h->pps_table[sh->pic_parameter_set_id], sizeof(pps_t));
-    //memcpy(sps_subset, h->sps_subset_table[pps->seq_parameter_set_id], sizeof(sps_subset_t));
-    memcpy(sps_subset->sps, h->sps_subset_table[pps->seq_parameter_set_id]->sps, sizeof(sps_t));
-    memcpy(sps_subset->sps_svc_ext, h->sps_subset_table[pps->seq_parameter_set_id]->sps_svc_ext, sizeof(sps_svc_ext_t));
+    if (0 <= sh->pic_parameter_set_id && sh->pic_parameter_set_id < 256)
+        memcpy(h->pps, h->pps_table[sh->pic_parameter_set_id], sizeof(pps_t));
+    if (0 <= pps->seq_parameter_set_id && pps->seq_parameter_set_id < 32) {
+        //memcpy(sps_subset, h->sps_subset_table[pps->seq_parameter_set_id], sizeof(sps_subset_t));
+        memcpy(sps_subset->sps, h->sps_subset_table[pps->seq_parameter_set_id]->sps, sizeof(sps_t));
+        memcpy(sps_subset->sps_svc_ext, h->sps_subset_table[pps->seq_parameter_set_id]->sps_svc_ext, sizeof(sps_svc_ext_t));
+        sps_subset->additional_extension2_flag = h->sps_subset_table[pps->seq_parameter_set_id]->additional_extension2_flag;
+    }
     
     if (sps_subset->sps->residual_colour_transform_flag)
     {
