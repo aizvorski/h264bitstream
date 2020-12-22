@@ -66,7 +66,7 @@ sub proc_value_read
     $values =~ s{\s*$}{};
 
     my $code;
-    if ($values =~ m{u\((.*)\)}) { $code = "$s = bs_read_u(b, $1);"; }
+    if ($values =~ m{(u|i)\((.*)\)}) { $code = "$s = bs_read_$1(b, $2);"; }
     elsif ($values =~ m{f\((\d+),\s*(.*)\)}) { $code = "/* $s */ bs_skip_u(b, $1);"; }
     elsif ($values =~ m{(ue|se|ce|te|me|u8|u1)}) { $code = "$s = bs_read_$1(b);"; }
     elsif ($values eq 'ae') { $code = "$s = bs_read_ae(b);"; }
@@ -87,7 +87,7 @@ sub proc_value_read_debug
     $values =~ s{\s*$}{};
 
     my $code;
-    if ($values =~ m{u\((.*)\)}) { $code = "$s = bs_read_u(b, $1);"; }
+    if ($values =~ m{(u|i)\((.*)\)}) { $code = "$s = bs_read_$1(b, $2);"; }
     elsif ($values =~ m{f\((\d+),\s*(.*)\)}) { $code = "int $s = bs_read_u(b, $1);"; }
     elsif ($values =~ m{(ue|se|ce|te|me|u8|u1)}) { $code = "$s = bs_read_$1(b);"; }
     elsif ($values eq 'ae') { $code = "$s = bs_read_ae(b);"; }
@@ -98,9 +98,9 @@ sub proc_value_read_debug
         $code = "if (cabac) { $s = bs_read_ae(b); }" . "\n${indent}" . "else { $code }";
     }
 
-    $code = "printf(\"\%d.\%d: \", b->p - b->start, b->bits_left); ".
+    $code = "printf(\"\%ld.\%d: \", (long int)(b->p - b->start), b->bits_left); ".
         $code .
-        " printf(\"$s: \%d \\n\", $s); ";
+        " printf(\"$s: \%d \\n\", $s);";
 
     return $indent . $code;
 }
@@ -112,7 +112,7 @@ sub proc_value_write
     $values =~ s{\s*$}{};
 
     my $code;
-    if ($values =~ m{u\((.*)\)}) { $code = "bs_write_u(b, $1, $s);"; }
+    if ($values =~ m{(u|i)\((.*)\)}) { $code = "bs_write_$1(b, $2, $s);"; }
     elsif ($values =~ m{f\((\d+),\s*(.*)\)}) { $code = "/* $s */ bs_write_u(b, $1, $2);"; }
     elsif ($values =~ m{(ue|se|ce|te|me|u8|u1)}) { $code = "bs_write_$1(b, $s);"; }
     elsif ($values eq 'ae') { $code = "bs_write_ae(b, $s);"; }

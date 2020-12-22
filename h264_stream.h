@@ -454,46 +454,6 @@ typedef struct
 
 typedef struct
 {
-    int _is_initialized;
-    int sps_id;
-    int initial_cpb_removal_delay;
-    int initial_cpb_delay_offset;
-} sei_buffering_t;
-
-typedef struct
-{
-    int clock_timestamp_flag;
-    int ct_type;
-    int nuit_field_based_flag;
-    int counting_type;
-    int full_timestamp_flag;
-    int discontinuity_flag;
-    int cnt_dropped_flag;
-    int n_frames;
-
-    int seconds_value;
-    int minutes_value;
-    int hours_value;
-
-    int seconds_flag;
-    int minutes_flag;
-    int hours_flag;
-
-    int time_offset;
-} picture_timestamp_t;
-
-typedef struct
-{
-    int _is_initialized;
-    int cpb_removal_delay;
-    int dpb_output_delay;
-    int pic_struct;
-    picture_timestamp_t clock_timestamps[3]; // 3 is the maximum possible value
-} sei_picture_timing_t;
-
-
-typedef struct
-{
     int rbsp_size;
     uint8_t* rbsp_buf;
 } slice_data_rbsp_t;

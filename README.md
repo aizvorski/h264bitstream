@@ -54,7 +54,7 @@ _This library is not an encoder or decoder_, although you could use it to make w
 ## Implementation Status
 
 Everything in the H264 standard is implemented except for: 
-- parsing of diffeent SEI messages
+- parsing of most SEI messages
 - SPS extension
 - slice data
 - slice data partitioning

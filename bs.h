@@ -64,6 +64,7 @@ static uint32_t bs_read_f(bs_t* b, int n);
 static uint32_t bs_read_u8(bs_t* b);
 static uint32_t bs_read_ue(bs_t* b);
 static int32_t  bs_read_se(bs_t* b);
+static int32_t  bs_read_i(bs_t* b, int n);
 
 static void bs_write_u1(bs_t* b, uint32_t v);
 static void bs_write_u(bs_t* b, int n, uint32_t v);
@@ -71,6 +72,7 @@ static void bs_write_f(bs_t* b, int n, uint32_t v);
 static void bs_write_u8(bs_t* b, uint32_t v);
 static void bs_write_ue(bs_t* b, uint32_t v);
 static void bs_write_se(bs_t* b, int32_t v);
+static void bs_write_i(bs_t* b, int n, int32_t v);
 
 static int bs_read_bytes(bs_t* b, uint8_t* buf, int len);
 static int bs_write_bytes(bs_t* b, uint8_t* buf, int len);
@@ -218,6 +220,7 @@ static inline int32_t bs_read_se(bs_t* b)
     return r;
 }
 
+static inline int32_t bs_read_i(bs_t* b, int n) { return (int32_t)bs_read_u(b, n); }
 
 static inline void bs_write_u1(bs_t* b, uint32_t v)
 {
@@ -327,6 +330,8 @@ static inline void bs_write_se(bs_t* b, int32_t v)
         bs_write_ue(b, v*2 - 1);
     }
 }
+
+static inline void bs_write_i(bs_t* b, int n, int32_t v) { bs_write_u(b, n, (uint32_t)v); }
 
 static inline int bs_read_bytes(bs_t* b, uint8_t* buf, int len)
 {
