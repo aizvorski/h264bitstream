@@ -48,6 +48,15 @@ void sei_free(sei_t* s)
         case SEI_TYPE_SCALABILITY_INFO:
             if ( s->sei_svc != NULL ) free(s->sei_svc);
             break;
+        case SEI_TYPE_PIC_TIMING:
+            if ( s->sei_pic_timing != NULL ) free(s->sei_pic_timing);
+            break;
+        case SEI_TYPE_BUFFERING_PERIOD:
+            if ( s->sei_buffering_period != NULL ) free(s->sei_buffering_period);
+            break;
+        case SEI_TYPE_RECOVERY_POINT:
+            if ( s->sei_recovery_point != NULL ) free(s->sei_recovery_point);
+            break;
         default:
             if ( s->data != NULL ) free(s->data);
     }
@@ -65,10 +74,26 @@ void read_sei_end_bits(h264_stream_t* h, bs_t* b )
             if ( bs_read_u1( b ) ) fprintf(stderr, "WARNING: bit_equal_to_zero is 1!!!!\n");
         }
     }
-    
-    read_rbsp_trailing_bits(b);
 }
 
+static const hrd_t* get_hrd_params( h264_stream_t* h )
+{
+    const hrd_t* hrd_params = NULL;
+
+    if (h && h->sps && h->sps->vui_parameters_present_flag)
+    {
+        if (h->sps->vui.nal_hrd_parameters_present_flag)
+        {
+            hrd_params = (const hrd_t*)&h->sps->hrd_nal;
+        }
+        else if (h->sps->vui.vcl_hrd_parameters_present_flag)
+        {
+            hrd_params = (const hrd_t*)&h->sps->hrd_vcl;
+        }
+    }
+
+    return hrd_params;
+}
 #end_preamble
 
 #function_declarations
@@ -246,6 +271,122 @@ void structure(sei_scalability_info)( h264_stream_t* h, bs_t* b )
 
 }
 
+// Appendix D.1.3 Picture timing SEI message syntax
+void structure(sei_picture_timing)( h264_stream_t* h, bs_t* b )
+{
+    sei_picture_timing_t* sei_pic_timing = h->sei->sei_pic_timing;
+
+    const hrd_t* hrd_params = get_hrd_params( h );
+
+    if ( hrd_params )
+    {
+        value( sei_pic_timing->cpb_removal_delay, u(hrd_params->cpb_removal_delay_length_minus1 + 1) );
+        value( sei_pic_timing->dpb_output_delay, u(hrd_params->dpb_output_delay_length_minus1 + 1) );
+    }
+
+    if ( h && h->sps && h->sps->vui_parameters_present_flag && h->sps->vui.pic_struct_present_flag )
+    {
+        value( sei_pic_timing->pic_struct, u(4) );
+
+        const int num_clock_ts = pic_struct_to_num_clock_ts[sei_pic_timing->pic_struct];
+
+        for ( int i = 0; i < num_clock_ts; i++ )
+        {
+            value( sei_pic_timing->clock_timestamps[i].clock_timestamp_flag, u1 );
+
+            if ( sei_pic_timing->clock_timestamps[i].clock_timestamp_flag )
+            {
+                value( sei_pic_timing->clock_timestamps[i].ct_type, _u(2) );
+                value( sei_pic_timing->clock_timestamps[i].nuit_field_based_flag, u1 );
+                value( sei_pic_timing->clock_timestamps[i].counting_type, u(5) );
+                value( sei_pic_timing->clock_timestamps[i].full_timestamp_flag, u1 );
+                value( sei_pic_timing->clock_timestamps[i].discontinuity_flag, u1 );
+                value( sei_pic_timing->clock_timestamps[i].cnt_dropped_flag, u1 );
+                value( sei_pic_timing->clock_timestamps[i].n_frames, u8 );
+
+                if ( sei_pic_timing->clock_timestamps[i].full_timestamp_flag )
+                {
+                    value( sei_pic_timing->clock_timestamps[i].seconds_value, u(6) );
+                    value( sei_pic_timing->clock_timestamps[i].minutes_value, u(6) );
+                    value( sei_pic_timing->clock_timestamps[i].hours_value, u(5) );
+                }
+                else
+                {
+                    value( sei_pic_timing->clock_timestamps[i].seconds_flag, u1 );
+
+                    if ( sei_pic_timing->clock_timestamps[i].seconds_flag )
+                    {
+                        value( sei_pic_timing->clock_timestamps[i].seconds_value, u(6) );
+                        value( sei_pic_timing->clock_timestamps[i].minutes_flag, u1 );
+
+                        if ( sei_pic_timing->clock_timestamps[i].minutes_flag )
+                        {
+                            value( sei_pic_timing->clock_timestamps[i].minutes_value, u(6) );
+                            value( sei_pic_timing->clock_timestamps[i].hours_flag, u1 );
+
+                            if ( sei_pic_timing->clock_timestamps[i].hours_flag )
+                            {
+                                value( sei_pic_timing->clock_timestamps[i].hours_value, u(5) );
+                            }
+                        }
+                    }
+                }
+            }
+
+            const int time_offset_length = hrd_params ? hrd_params->time_offset_length : 24;
+
+            if ( time_offset_length )
+            {
+                value( sei_pic_timing->clock_timestamps[i].time_offset, i(time_offset_length) );
+            }
+        }
+    }
+}
+
+// Appendix D.1.2 Buffering period SEI message syntax
+void structure(sei_buffering_period)( h264_stream_t* h, bs_t* b )
+{
+    sei_buffering_period_t* sei_buffering_period = h->sei->sei_buffering_period;
+
+    value( sei_buffering_period->sps_id, ue );
+
+    if ( h && h->sps )
+    {
+        if ( h->sps->vui_parameters_present_flag && h->sps->vui.nal_hrd_parameters_present_flag )
+        {
+            const int length = h->sps->hrd_nal.initial_cpb_removal_delay_length_minus1 + 1;
+
+            for ( int SchedSelIdx = 0; SchedSelIdx <= h->sps->hrd_nal.cpb_cnt_minus1; SchedSelIdx++ )
+            {
+                value( sei_buffering_period->initial_cpb_removal_delay[ SchedSelIdx ], u(length) );
+                value( sei_buffering_period->initial_cpb_delay_offset[ SchedSelIdx ], u(length) );
+            }
+        }
+
+        if ( h->sps->vui_parameters_present_flag && h->sps->vui.vcl_hrd_parameters_present_flag )
+        {
+            const int length = h->sps->hrd_vcl.initial_cpb_removal_delay_length_minus1 + 1;
+
+            for ( int SchedSelIdx = 0; SchedSelIdx <= h->sps->hrd_vcl.cpb_cnt_minus1; SchedSelIdx++ )
+            {
+                value( sei_buffering_period->initial_cpb_removal_delay[ SchedSelIdx ], u(length) );
+                value( sei_buffering_period->initial_cpb_delay_offset[ SchedSelIdx ], u(length) );
+            }
+        }
+    }
+}
+
+// Appendix D.1.8 Recovery point SEI message syntax
+void structure(sei_recovery_point)( h264_stream_t* h, bs_t* b )
+{
+    sei_recovery_point_t* sei_recovery_point = h->sei->sei_recovery_point;
+
+    value( sei_recovery_point->recovery_frame_cnt, ue );
+    value( sei_recovery_point->exact_match_flag, u1 );
+    value( sei_recovery_point->broken_link_flag, u1 );
+    value( sei_recovery_point->changing_slice_grp_idc, u(2) );
+}
+
 // D.1 SEI payload syntax
 void structure(sei_payload)( h264_stream_t* h, bs_t* b )
 {
@@ -257,9 +398,30 @@ void structure(sei_payload)( h264_stream_t* h, bs_t* b )
         case SEI_TYPE_SCALABILITY_INFO:
             if( is_reading )
             {
-                s->sei_svc = (uint8_t*)calloc( 1, sizeof(sei_scalability_info_t) );
+                s->sei_svc = (sei_scalability_info_t*)calloc( 1, sizeof(sei_scalability_info_t) );
             }
             structure(sei_scalability_info)( h, b );
+            break;
+        case SEI_TYPE_PIC_TIMING:
+            if ( is_reading )
+            {
+                s->sei_pic_timing = (sei_picture_timing_t*)calloc( 1, sizeof(sei_picture_timing_t) );
+            }
+            structure(sei_picture_timing)( h, b );
+            break;
+        case SEI_TYPE_BUFFERING_PERIOD:
+            if ( is_reading )
+            {
+                s->sei_buffering_period = (sei_buffering_period_t*)calloc( 1, sizeof(sei_buffering_period_t) );
+            }
+            structure(sei_buffering_period)( h, b );
+            break;
+        case SEI_TYPE_RECOVERY_POINT:
+            if ( is_reading )
+            {
+                s->sei_recovery_point = (sei_recovery_point_t*)calloc( 1, sizeof(sei_recovery_point_t) );
+            }
+            structure(sei_recovery_point)( h, b );
             break;
         default:
             if( is_reading )
@@ -268,9 +430,11 @@ void structure(sei_payload)( h264_stream_t* h, bs_t* b )
             }
             
             for ( i = 0; i < s->payloadSize; i++ )
+            {
                 value( s->data[i], u8 );
+            }
     }
-    
-    //if( is_reading )
-    //    read_sei_end_bits(h, b);
+
+    if( is_reading )
+        read_sei_end_bits(h, b);
 }

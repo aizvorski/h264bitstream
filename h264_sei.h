@@ -35,7 +35,9 @@ extern "C" {
 #endif
 
 #define MAX_J 128
-    
+
+static const int pic_struct_to_num_clock_ts[16] = {1, 1, 1, 2, 2, 3, 3, 2, 3, 0, 0, 0, 0, 0, 0, 0};
+
 typedef struct
 {
     unsigned short layer_id; //TBD: is layer_id possible to larger than 65535
@@ -132,7 +134,55 @@ typedef struct
         unsigned char priority_id_setting_uri[MAX_LENGTH];
     } pr[MAX_J];
 } sei_scalability_info_t;
-    
+
+typedef struct
+{
+    int clock_timestamp_flag;
+    int ct_type;
+    int nuit_field_based_flag;
+    int counting_type;
+    int full_timestamp_flag;
+    int discontinuity_flag;
+    int cnt_dropped_flag;
+    int n_frames;
+
+    int seconds_value;
+    int minutes_value;
+    int hours_value;
+
+    int seconds_flag;
+    int minutes_flag;
+    int hours_flag;
+
+    int time_offset;
+} picture_timestamp_t;
+
+typedef struct
+{
+    int _is_initialized;
+    int cpb_removal_delay;
+    int dpb_output_delay;
+    int pic_struct;
+    picture_timestamp_t clock_timestamps[3]; // 3 is the maximum possible value
+} sei_picture_timing_t;
+
+typedef struct
+{
+    int _is_initialized;
+    int sps_id;
+    int initial_cpb_removal_delay[32];
+    int initial_cpb_delay_offset[32];
+} sei_buffering_period_t;
+
+typedef struct
+{
+    int _is_initialized;
+    int recovery_frame_cnt;
+    int exact_match_flag;
+    int broken_link_flag;
+    int changing_slice_grp_idc;
+} sei_recovery_point_t;
+
 typedef struct
 {
     int payloadType;
@@ -141,6 +191,9 @@ typedef struct
     union
     {
         sei_scalability_info_t* sei_svc;
+        sei_picture_timing_t* sei_pic_timing;
+        sei_buffering_period_t* sei_buffering_period;
+        sei_recovery_point_t* sei_recovery_point;
         uint8_t* data;
     };
 } sei_t;
