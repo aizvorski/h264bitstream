@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 
         sz += rsz;
 
-        while (find_nal_unit(p, sz, &nal_start, &nal_end) > 0)
+        while (find_nal_unit(p, sz, &nal_start, &nal_end) >= 0)
         {
             if ( opt_verbose > 0 )
             {
