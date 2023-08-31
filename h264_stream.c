@@ -1031,6 +1031,9 @@ void read_slice_header(h264_stream_t* h, bs_t* b)
             {
                 sh->num_ref_idx_l1_active_minus1 = bs_read_ue(b);
             }
+        } else {
+            sh->num_ref_idx_l0_active_minus1 = pps->num_ref_idx_l0_active_minus1;
+            sh->num_ref_idx_l1_active_minus1 = pps->num_ref_idx_l1_active_minus1;
         }
     }
     read_ref_pic_list_reordering(h, b);
@@ -1139,7 +1142,7 @@ void read_pred_weight_table(h264_stream_t* h, bs_t* b)
     {
         sh->pwt.chroma_log2_weight_denom = bs_read_ue(b);
     }
-    for( i = 0; i <= pps->num_ref_idx_l0_active_minus1; i++ )
+    for( i = 0; i <= sh->num_ref_idx_l0_active_minus1; i++ )
     {
         sh->pwt.luma_weight_l0_flag[i] = bs_read_u1(b);
         if( sh->pwt.luma_weight_l0_flag[i] )
@@ -1162,7 +1165,7 @@ void read_pred_weight_table(h264_stream_t* h, bs_t* b)
     }
     if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
-        for( i = 0; i <= pps->num_ref_idx_l1_active_minus1; i++ )
+        for( i = 0; i <= sh->num_ref_idx_l1_active_minus1; i++ )
         {
             sh->pwt.luma_weight_l1_flag[i] = bs_read_u1(b);
             if( sh->pwt.luma_weight_l1_flag[i] )
@@ -1310,6 +1313,9 @@ void read_slice_header_in_scalable_extension(h264_stream_t* h, bs_t* b)
                 {
                     sh->num_ref_idx_l1_active_minus1 = bs_read_ue(b);
                 }
+            } else {
+                sh->num_ref_idx_l0_active_minus1 = pps->num_ref_idx_l0_active_minus1;
+                sh->num_ref_idx_l1_active_minus1 = pps->num_ref_idx_l1_active_minus1; 
             }
         }
         read_ref_pic_list_reordering(h, b);
@@ -2468,7 +2474,7 @@ void write_pred_weight_table(h264_stream_t* h, bs_t* b)
     {
         bs_write_ue(b, sh->pwt.chroma_log2_weight_denom);
     }
-    for( i = 0; i <= pps->num_ref_idx_l0_active_minus1; i++ )
+    for( i = 0; i <= sh->num_ref_idx_l0_active_minus1; i++ )
     {
         bs_write_u1(b, sh->pwt.luma_weight_l0_flag[i]);
         if( sh->pwt.luma_weight_l0_flag[i] )
@@ -2491,7 +2497,7 @@ void write_pred_weight_table(h264_stream_t* h, bs_t* b)
     }
     if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
-        for( i = 0; i <= pps->num_ref_idx_l1_active_minus1; i++ )
+        for( i = 0; i <= sh->num_ref_idx_l1_active_minus1; i++ )
         {
             bs_write_u1(b, sh->pwt.luma_weight_l1_flag[i]);
             if( sh->pwt.luma_weight_l1_flag[i] )
@@ -3697,6 +3703,9 @@ void read_debug_slice_header(h264_stream_t* h, bs_t* b)
             {
                 printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sh->num_ref_idx_l1_active_minus1 = bs_read_ue(b); printf("sh->num_ref_idx_l1_active_minus1: %d \n", sh->num_ref_idx_l1_active_minus1); 
             }
+        } else {
+            sh->num_ref_idx_l0_active_minus1 = pps->num_ref_idx_l0_active_minus1;
+            sh->num_ref_idx_l1_active_minus1 = pps->num_ref_idx_l1_active_minus1;
         }
     }
     read_debug_ref_pic_list_reordering(h, b);
@@ -3805,7 +3814,7 @@ void read_debug_pred_weight_table(h264_stream_t* h, bs_t* b)
     {
         printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sh->pwt.chroma_log2_weight_denom = bs_read_ue(b); printf("sh->pwt.chroma_log2_weight_denom: %d \n", sh->pwt.chroma_log2_weight_denom); 
     }
-    for( i = 0; i <= pps->num_ref_idx_l0_active_minus1; i++ )
+    for( i = 0; i <= sh->num_ref_idx_l0_active_minus1; i++ )
     {
         printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sh->pwt.luma_weight_l0_flag[i] = bs_read_u1(b); printf("sh->pwt.luma_weight_l0_flag[i]: %d \n", sh->pwt.luma_weight_l0_flag[i]); 
         if( sh->pwt.luma_weight_l0_flag[i] )
@@ -3828,7 +3837,7 @@ void read_debug_pred_weight_table(h264_stream_t* h, bs_t* b)
     }
     if( is_slice_type( sh->slice_type, SH_SLICE_TYPE_B ) )
     {
-        for( i = 0; i <= pps->num_ref_idx_l1_active_minus1; i++ )
+        for( i = 0; i <= sh->num_ref_idx_l1_active_minus1; i++ )
         {
             printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sh->pwt.luma_weight_l1_flag[i] = bs_read_u1(b); printf("sh->pwt.luma_weight_l1_flag[i]: %d \n", sh->pwt.luma_weight_l1_flag[i]); 
             if( sh->pwt.luma_weight_l1_flag[i] )
