@@ -9,16 +9,16 @@ bin_PROGRAMS = h264_analyze svc_split
 lib_LTLIBRARIES = libh264bitstream.la
 
 libh264bitstream_la_LDFLAGS = -no-undefined
-libh264bitstream_la_SOURCES = h264_stream.c h264_sei.c h264_nal.c
+libh264bitstream_la_SOURCES = src/h264_stream.c src/h264_sei.c src/h264_nal.c
 
-h264_analyze_SOURCES = h264_analyze.c
+h264_analyze_SOURCES = src/h264_analyze.c
 h264_analyze_LDADD = libh264bitstream.la
 
-svc_split_SOURCES = svc_split.c
+svc_split_SOURCES = src/svc_split.c
 svc_split_LDADD = libh264bitstream.la
 
-include_HEADERS = h264_stream.h h264_sei.h h264_avcc.h
-pkginclude_HEADERS = h264_stream.h h264_sei.h h264_avcc.h bs.h
+include_HEADERS = src/h264_stream.h src/h264_sei.h src/h264_avcc.h
+pkginclude_HEADERS = src/h264_stream.h src/h264_sei.h src/h264_avcc.h src/bs.h
 
 clean-local:
 	rm -rf *.pc

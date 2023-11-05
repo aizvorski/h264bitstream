@@ -1,6 +1,6 @@
 AC_INIT(h264bitstream, 0.2.0, aizvorski@gmail.com)
 
-AC_CONFIG_SRCDIR(./h264_stream.c)
+AC_CONFIG_SRCDIR(./src/h264_stream.c)
 
 AC_CONFIG_AUX_DIR(build-aux)
 
@@ -11,9 +11,9 @@ AC_CANONICAL_TARGET
 EXTRA_CFLAGS='-std=c99 -Wno-error'
 
 if test ${target_os%%.*} = darwin9; then
-   EXTRA_CFLAGS="-force_cpusubtype_ALL -mmacosx-version-min=10.4 -arch i386 -arch ppc -arch x86_64 -isysroot /Developer/SDKs/MacOSX10.4u.sdk"
-   CFLAGS+=${EXTRA_CFLAGS}
-   am_cv_CC_dependencies_compiler_type=gcc
+	EXTRA_CFLAGS="-force_cpusubtype_ALL -mmacosx-version-min=10.4 -arch i386 -arch ppc -arch x86_64 -isysroot /Developer/SDKs/MacOSX10.4u.sdk"
+	CFLAGS+=${EXTRA_CFLAGS}
+	am_cv_CC_dependencies_compiler_type=gcc
 fi
 
 
