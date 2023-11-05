@@ -1,4 +1,4 @@
-AC_INIT(h264bitstream, 0.2.0, aizvorski@gmail.com)
+AC_INIT([h264bitstream],[0.2.0],[aizvorski@gmail.com])
 
 AC_CONFIG_SRCDIR(./src/h264_stream.c)
 
@@ -23,9 +23,10 @@ AM_INIT_AUTOMAKE([foreign])
 
 AC_PROG_CC
 AM_PROG_CC_C_O
-AC_PROG_LD
 AC_PROG_INSTALL
-AC_PROG_LIBTOOL
+
+LT_INIT
+LT_PATH_LD
 
 AC_CHECK_FUNCS(getopt_long, , AC_MSG_WARN(getopt_long not found. Long options will not work.) )
 
