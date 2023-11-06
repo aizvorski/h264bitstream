@@ -28,11 +28,11 @@ all: libh264bitstream.a $(BINARIES)
 h264_analyze: h264_analyze.o libh264bitstream.a
 	$(LD) $(LDFLAGS) -o h264_analyze h264_analyze.o -L. -lh264bitstream -lm
 
-libh264bitstream.a: src/h264_stream.c src/h264_nal.c src/h264_stream.h src/h264_slice_data.c src/h264_slice_data.h src/h264_sei.c src/h264_sei.h 
-	$(CC) $(CFLAGS) -c -o h264_nal.o src/h264_nal.c
-	$(CC) $(CFLAGS) -c -o h264_stream.o src/h264_stream.c
-	$(CC) $(CFLAGS) -c -o h264_slice_data.o src/h264_slice_data.c
-	$(CC) $(CFLAGS) -c -o h264_sei.o src/h264_sei.c
+libh264bitstream.a: h264_stream.c h264_nal.c h264_stream.h h264_slice_data.c h264_slice_data.h h264_sei.c h264_sei.h 
+	$(CC) $(CFLAGS) -c -o h264_nal.o h264_nal.c
+	$(CC) $(CFLAGS) -c -o h264_stream.o h264_stream.c
+	$(CC) $(CFLAGS) -c -o h264_slice_data.o h264_slice_data.c
+	$(CC) $(CFLAGS) -c -o h264_sei.o h264_sei.c
 	$(AR) $(ARFLAGS) libh264bitstream.a h264_stream.o h264_nal.o h264_slice_data.o h264_sei.o  
 
 
@@ -40,7 +40,7 @@ clean:
 	rm -f *.o libh264bitstream.a $(BINARIES)
 	rm -f libh264bitstream-uninstalled.sh libh264bitstream.pc.in
 
-dox: src/h264_stream.c src/h264_stream.h src/bs.h Doxyfile
+dox: h264_stream.c h264_stream.h bs.h Doxyfile
 	doxygen Doxyfile
 
 dist: clean

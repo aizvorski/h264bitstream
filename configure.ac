@@ -1,6 +1,6 @@
 AC_INIT([h264bitstream],[0.2.0],[aizvorski@gmail.com])
 
-AC_CONFIG_SRCDIR(./src/h264_stream.c)
+AC_CONFIG_SRCDIR(./h264_stream.c)
 
 AC_CONFIG_AUX_DIR(build-aux)
 
