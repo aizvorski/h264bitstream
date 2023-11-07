@@ -1,4 +1,4 @@
-AC_INIT(h264bitstream, 0.2.0, aizvorski@gmail.com)
+AC_INIT([h264bitstream],[0.2.0],[aizvorski@gmail.com])
 
 AC_CONFIG_SRCDIR(./h264_stream.c)
 
@@ -11,9 +11,9 @@ AC_CANONICAL_TARGET
 EXTRA_CFLAGS='-std=c99 -Wno-error'
 
 if test ${target_os%%.*} = darwin9; then
-   EXTRA_CFLAGS="-force_cpusubtype_ALL -mmacosx-version-min=10.4 -arch i386 -arch ppc -arch x86_64 -isysroot /Developer/SDKs/MacOSX10.4u.sdk"
-   CFLAGS+=${EXTRA_CFLAGS}
-   am_cv_CC_dependencies_compiler_type=gcc
+	EXTRA_CFLAGS="-force_cpusubtype_ALL -mmacosx-version-min=10.4 -arch i386 -arch ppc -arch x86_64 -isysroot /Developer/SDKs/MacOSX10.4u.sdk"
+	CFLAGS+=${EXTRA_CFLAGS}
+	am_cv_CC_dependencies_compiler_type=gcc
 fi
 
 
@@ -23,9 +23,10 @@ AM_INIT_AUTOMAKE([foreign])
 
 AC_PROG_CC
 AM_PROG_CC_C_O
-AC_PROG_LD
 AC_PROG_INSTALL
-AC_PROG_LIBTOOL
+
+LT_INIT
+LT_PATH_LD
 
 AC_CHECK_FUNCS(getopt_long, , AC_MSG_WARN(getopt_long not found. Long options will not work.) )
 

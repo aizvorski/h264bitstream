@@ -38,6 +38,7 @@ libh264bitstream.a: h264_stream.c h264_nal.c h264_stream.h h264_slice_data.c h26
 
 clean:
 	rm -f *.o libh264bitstream.a $(BINARIES)
+	rm -f libh264bitstream-uninstalled.sh libh264bitstream.pc.in
 
 dox: h264_stream.c h264_stream.h bs.h Doxyfile
 	doxygen Doxyfile

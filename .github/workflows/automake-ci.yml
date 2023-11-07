@@ -1,0 +1,44 @@
+name: Automake CI
+
+on:
+  push:
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+        
+    steps:
+    - uses: actions/checkout@v3
+    - name: check dependencies
+      run: |
+        if [[ "${{ matrix.os}}" == "macos-latest" ]]; then
+          brew install automake autoconf libtool
+        else
+          sudo apt-get update
+          sudo apt-get install autoconf libtool build-essential
+        fi
+    - name: autoreconf
+      run: |
+        autoupdate -f
+        autoreconf -i -f
+    - name: configure
+      run: ./configure
+    - name: make
+      run: make
+    - name: make check
+      run: make check
+    - name: make distcheck
+      run: make distcheck
+    - name: test
+      run: |
+        ./h264_analyze samples/JM_cqm_cabac.264 > tmp1.out
+        diff -u samples/JM_cqm_cabac.out tmp1.out
+        ./h264_analyze samples/x264_test.264 > tmp2.out
+        diff -u samples/x264_test.out tmp2.out
+        ./h264_analyze samples/riverbed-II-360p-48961.264 > tmp3.out
+        diff -u samples/riverbed-II-360p-48961.out tmp3.out

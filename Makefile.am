@@ -22,6 +22,7 @@ pkginclude_HEADERS = h264_stream.h h264_sei.h h264_avcc.h bs.h
 
 clean-local:
 	rm -rf *.pc
+	rm -f libh264bitstream-uninstalled.sh libh264bitstream.pc.in
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libh264bitstream.pc
