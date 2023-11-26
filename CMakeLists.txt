@@ -17,6 +17,10 @@ target_compile_options(compile_options INTERFACE -Wall -pedantic $<IF:$<CONFIG:D
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
 	target_compile_options(compile_options INTERFACE -Wextra -Wshadow -Wwrite-strings -Wno-unused -g)
 endif()
+if(APPLE)
+	# Compiler flags for creating universal (fat) binaries.
+	#target_compile_options(compile_options INTERFACE -force_cpusubtype_ALL -mmacosx-version-min=10.4 -arch i386 -arch ppc -arch x86_64)
+endif()
 
 # Library sources
 set(SOURCES
