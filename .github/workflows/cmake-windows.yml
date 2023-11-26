@@ -1,0 +1,51 @@
+name: CMake CI on Windows
+
+on:
+  push:
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    name: ${{ matrix.os }}-${{ matrix.c_compiler }}-${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+
+    strategy:
+      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
+      fail-fast: false
+
+      matrix:
+        os: [windows-latest]
+        build_type: [Debug, Release]
+        c_compiler: [cl]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure CMake
+      run: |
+        cmake -S . -B build -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+
+    - name: Build CMake
+      run: |
+        cmake --build build --config ${{ matrix.build_type }}
+
+    - name: Run CMake tests
+      run: |
+        ctest -C ${{ matrix.build_type }} --output-on-failure -V
+
+    - name: Run Unit tests
+      working-directory: build/${{ matrix.build_type }}
+      run: |
+        $result = 0
+        ./h264_analyze ../../samples/JM_cqm_cabac.264 > tmp1.out
+        git diff --exit-code --no-index ../../samples/JM_cqm_cabac.out tmp1.out
+        if ($LASTEXITCODE -ne 0){ $result = $LASTEXITCODE }
+        ./h264_analyze ../../samples/x264_test.264 > tmp2.out
+        git diff --exit-code --no-index ../../samples/x264_test.out tmp2.out
+        if ($LASTEXITCODE -ne 0){ $result = $LASTEXITCODE }
+        ./h264_analyze ../../samples/riverbed-II-360p-48961.264 > tmp3.out
+        git diff --exit-code --no-index ../../samples/riverbed-II-360p-48961.out tmp3.out
+        if ($LASTEXITCODE -ne 0){ $result = $LASTEXITCODE }
+        if ($result -ne 0){ throw $result }
