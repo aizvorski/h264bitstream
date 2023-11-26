@@ -1,0 +1,46 @@
+name: CMake CI on Ubuntu
+
+on:
+  push:
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    name: ${{ matrix.os }}-${{ matrix.c_compiler }}-${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+
+    strategy:
+      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
+      fail-fast: false
+
+      matrix:
+        os: [ubuntu-latest]
+        build_type: [Debug, Release]
+        c_compiler: [gcc, clang]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure CMake
+      run: |
+        cmake -S . -B build -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+    - name: Build CMake
+      run: |
+        cmake --build build
+
+    - name: Run CMake tests
+      run: |
+        ctest -C ${{ matrix.build_type }} --output-on-failure -V
+
+    - name: Run Unit tests
+      working-directory: build
+      run: |
+        ./h264_analyze ../samples/JM_cqm_cabac.264 > tmp1.out
+        diff -u ../samples/JM_cqm_cabac.out tmp1.out
+        ./h264_analyze ../samples/x264_test.264 > tmp2.out
+        diff -u ../samples/x264_test.out tmp2.out
+        ./h264_analyze ../samples/riverbed-II-360p-48961.264 > tmp3.out
+        diff -u ../samples/riverbed-II-360p-48961.out tmp3.out
