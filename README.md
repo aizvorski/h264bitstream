@@ -50,6 +50,12 @@ All commands below should be run from the project root directory.
           └── libh264bitstream.pc
   ```
 
+  CMake doesn't support `make uninstall` by default. But the project has the `uninstall` target, which deletes all files listed in `install_manifest.txt` file. To use it, run:
+  
+  ```sh
+  cmake --build .builddir --target uninstall
+  ```
+
 ## Compile and Install with Autotools
 
 1. Install pre-requisites (Debian, Ubuntu)

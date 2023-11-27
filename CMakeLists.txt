@@ -59,8 +59,8 @@ install(TARGETS h264bitstream h264_analyze svc_split
 	FILE_SET headers
 )
 
+# Support for pkg-config in consuming projects
 if(UNIX)
-	# Support for pkg-config in consuming projects
 	set(prefix "${CMAKE_INSTALL_PREFIX}")
 	set(exec_prefix "${CMAKE_INSTALL_PREFIX}")
 	set(libdir "\${prefix}/${CMAKE_INSTALL_LIBDIR}")
@@ -74,3 +74,15 @@ if(UNIX)
 		DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig"
 	)
 endif(UNIX)
+
+# uninstall target
+if(NOT TARGET uninstall)
+	configure_file(
+		"${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+		"${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+		IMMEDIATE @ONLY
+	)
+	add_custom_target(uninstall
+		COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake
+	)
+endif()
