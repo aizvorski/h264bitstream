@@ -2,15 +2,67 @@ A library to read and write H.264 video bitstreams, in particular to examine or 
 
 [![CircleCI](https://circleci.com/gh/aizvorski/h264bitstream.svg?style=shield)](https://circleci.com/gh/aizvorski/h264bitstream)
 
-## Compile and Install
+## Compile and Install with CMake
+
+There are many variations of same CMake commands. You can run commands from the project root directory. You can create a build-directory and run commands from it. Read [the official CMake documentation](https://cmake.org/cmake/help/latest/manual/cmake.1.html) for more information.
+
+All commands below should be run from the project root directory. 
+
+1. Configure the project:
+
+  ```sh
+  cmake -S . -B .builddir
+  ```
+
+  Here you can specify the compiler (`CMAKE_C_COMPILER`), build type (`CMAKE_BUILD_TYPE`) and several other features, that do fine tuning of your building process.
+  
+  Remember, that in case of _gcc_ and _clang_ you cannot build both debug and release binaries into one directory. You should use separate directories for every build configuration.\
+  On the other hand, _msvc_ supports multi-config building, as it creates subfolders for each config.
+
+2. Build the project:
+
+  ```sh
+  cmake --build .builddir
+  ```
+
+3. Optionally, install the binaries and headers into `/usr/local`:
+
+  ```sh
+  cmake --install .builddir
+  ```
+
+  CMake creates the file tree:
+
+  ```
+  /usr/local:
+  ├── bin
+  │   ├── h264_analyze
+  │   └── svc_split
+  ├── include
+  │   ├── bs.h
+  │   ├── h264_avcc.h
+  │   ├── h264_sei.h
+  │   └── h264_stream.h
+  ├── lib
+  │   └── libh264bitstream.a
+  └── share
+      └── pkgconfig
+          └── libh264bitstream.pc
+  ```
+
+## Compile and Install with Autotools
 
 1. Install pre-requisites (Debian, Ubuntu)
   
-    `sudo apt-get install build-essential libtool autoconf ffmpeg`
+    ```sh
+    sudo apt-get install build-essential libtool autoconf ffmpeg
+    ```
 
 1. Auto-reconfigure the project
 
-    `autoreconf -i`
+    ```sh
+    autoreconf -i
+    ```
 
 1. Run the generated configure script and build the project
 
@@ -21,7 +73,9 @@ A library to read and write H.264 video bitstreams, in particular to examine or 
 
 1. Optionally, install the binaries in `/usr/local/`
 
-    `make install`
+    ```sh
+    make install
+    ```
 
 This will produce `/usr/local/bin/h264_analyze` and `/usr/local/lib/libh264bitstream`.
 
@@ -143,8 +197,8 @@ The library does not try to maintain a table of different SPS and PPS, nor does 
 
 ## Copyright
 
-Copyright (C) 2013-2017 Alex Izvorski and contributors
-Copyright (C) 2008-2012 Alex Izvorski and Alex Giladi
+Copyright (C) 2013-2017 Alex Izvorski and contributors\
+Copyright (C) 2008-2012 Alex Izvorski and Alex Giladi\
 Copyright (C) 2005-2007 Auroras Entertainment, LLC
 
 Written by Alex Izvorski <aizvorski@gmail.com>
