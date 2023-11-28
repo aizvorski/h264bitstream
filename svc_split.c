@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
                     break;
                     
                 case NAL_UNIT_TYPE_PPS:
-                    pps_buf[h->pps->pic_parameter_set_id] = malloc(nal_end);
+                    pps_buf[h->pps->pic_parameter_set_id] = realloc(pps_buf[h->pps->pic_parameter_set_id], nal_end);
                     memcpy(pps_buf[h->pps->pic_parameter_set_id], p - nal_start, nal_end);
                     pps_buf_size[h->pps->pic_parameter_set_id] = nal_end;
                     

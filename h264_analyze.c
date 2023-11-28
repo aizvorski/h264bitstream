@@ -64,11 +64,11 @@ int main(int argc, char *argv[])
 {
     FILE* infile;
 
+    if (argc < 2) { usage(); return EXIT_FAILURE; }
+
     uint8_t* buf = (uint8_t*)malloc( BUFSIZE );
 
     h264_stream_t* h = h264_new();
-
-    if (argc < 2) { usage(); return EXIT_FAILURE; }
 
     int opt_verbose = 1;
     int opt_probe = 0;
@@ -149,11 +149,10 @@ int main(int argc, char *argv[])
             {
                 // print codec parameter, per RFC 6381.
                 int constraint_byte = h->sps->constraint_set0_flag << 7;
-                constraint_byte = h->sps->constraint_set1_flag << 6;
-                constraint_byte = h->sps->constraint_set2_flag << 5;
-                constraint_byte = h->sps->constraint_set3_flag << 4;
-                constraint_byte = h->sps->constraint_set4_flag << 3;
-                constraint_byte = h->sps->constraint_set4_flag << 3;
+                constraint_byte |= h->sps->constraint_set1_flag << 6;
+                constraint_byte |= h->sps->constraint_set2_flag << 5;
+                constraint_byte |= h->sps->constraint_set3_flag << 4;
+                constraint_byte |= h->sps->constraint_set4_flag << 3;
 
                 fprintf( h264_dbgfile, "codec: avc1.%02X%02X%02X\n",h->sps->profile_idc, constraint_byte, h->sps->level_idc );
 
