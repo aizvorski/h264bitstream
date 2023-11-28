@@ -28,12 +28,13 @@ all: libh264bitstream.a $(BINARIES)
 h264_analyze: h264_analyze.o libh264bitstream.a
 	$(LD) $(LDFLAGS) -o h264_analyze h264_analyze.o -L. -lh264bitstream -lm
 
-libh264bitstream.a: h264_stream.c h264_nal.c h264_stream.h h264_slice_data.c h264_slice_data.h h264_sei.c h264_sei.h 
+libh264bitstream.a: h264_stream.c h264_nal.c h264_stream.h h264_slice_data.c h264_slice_data.h h264_sei.c h264_sei.h h264_avcc.c h264_avcc.h
 	$(CC) $(CFLAGS) -c -o h264_nal.o h264_nal.c
 	$(CC) $(CFLAGS) -c -o h264_stream.o h264_stream.c
 	$(CC) $(CFLAGS) -c -o h264_slice_data.o h264_slice_data.c
 	$(CC) $(CFLAGS) -c -o h264_sei.o h264_sei.c
-	$(AR) $(ARFLAGS) libh264bitstream.a h264_stream.o h264_nal.o h264_slice_data.o h264_sei.o  
+	$(CC) $(CFLAGS) -c -o h264_avcc.o h264_avcc.c
+	$(AR) $(ARFLAGS) libh264bitstream.a h264_stream.o h264_nal.o h264_slice_data.o h264_avcc.o h264_sei.o  
 
 
 clean:
