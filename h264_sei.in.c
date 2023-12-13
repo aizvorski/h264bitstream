@@ -257,7 +257,7 @@ void structure(sei_payload)( h264_stream_t* h, bs_t* b )
         case SEI_TYPE_SCALABILITY_INFO:
             if( is_reading )
             {
-                s->sei_svc = (uint8_t*)calloc( 1, sizeof(sei_scalability_info_t) );
+                s->sei_svc = (sei_scalability_info_t*)calloc( 1, sizeof(sei_scalability_info_t) );
             }
             structure(sei_scalability_info)( h, b );
             break;
@@ -268,7 +268,9 @@ void structure(sei_payload)( h264_stream_t* h, bs_t* b )
             }
             
             for ( i = 0; i < s->payloadSize; i++ )
+            {
                 value( s->data[i], u8 );
+            }
     }
     
     //if( is_reading )
