@@ -135,12 +135,23 @@ typedef struct
     
 typedef struct
 {
+    bool cancel;
+    bool hor_flip;
+    bool ver_flip;
+    unsigned short anticlockwise_rotation;
+    int display_orientation_repetition_period;
+    bool display_orientation_extension_flag;
+} sei_display_orientation_t;
+
+typedef struct
+{
     int payloadType;
     int payloadSize;
     
     union
     {
         sei_scalability_info_t* sei_svc;
+        sei_display_orientation_t* sei_do;
         uint8_t* data;
     };
 } sei_t;
@@ -172,6 +183,7 @@ void sei_free(sei_t* s);
 #define SEI_TYPE_DEBLOCKING_FILTER_DISPLAY_PREFERENCE  20
 #define SEI_TYPE_STEREO_VIDEO_INFO  21
 #define SEI_TYPE_SCALABILITY_INFO  24
+#define SEI_TYPE_DISPLAY_ORIENTATION  47
 
 #ifdef __cplusplus
 }
