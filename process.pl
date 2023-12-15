@@ -98,7 +98,7 @@ sub proc_value_read_debug
         $code = "if (cabac) { $s = bs_read_ae(b); }" . "\n${indent}" . "else { $code }";
     }
 
-    $code = "printf(\"\%d.\%d: \", b->p - b->start, b->bits_left); ".
+    $code = "printf(\"\%ld.\%d: \", (long int)(b->p - b->start), b->bits_left); ".
         $code .
         " printf(\"$s: \%d \\n\", $s); ";
 

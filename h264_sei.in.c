@@ -246,6 +246,25 @@ void structure(sei_scalability_info)( h264_stream_t* h, bs_t* b )
 
 }
 
+
+// Appendix D.1.27 Display Orientation SEI message syntax
+void structure(sei_display_orientation)( h264_stream_t* h, bs_t* b )
+{
+    sei_display_orientation_t* sei_do = h->sei->sei_do;
+
+    value( sei_do->cancel, u1 );
+
+    if( !sei_do->cancel )
+    {
+        value( sei_do->hor_flip, u1 );
+        value( sei_do->ver_flip, u1 );
+        value( sei_do->anticlockwise_rotation, u(16) );
+        value( sei_do->display_orientation_repetition_period, ue );
+        value( sei_do->display_orientation_extension_flag, u1 );
+    }
+
+}
+
 // D.1 SEI payload syntax
 void structure(sei_payload)( h264_stream_t* h, bs_t* b )
 {
@@ -257,9 +276,16 @@ void structure(sei_payload)( h264_stream_t* h, bs_t* b )
         case SEI_TYPE_SCALABILITY_INFO:
             if( is_reading )
             {
-                s->sei_svc = (uint8_t*)calloc( 1, sizeof(sei_scalability_info_t) );
+                s->sei_svc = (sei_scalability_info_t*)calloc( 1, sizeof(sei_scalability_info_t) );
             }
             structure(sei_scalability_info)( h, b );
+            break;
+        case SEI_TYPE_DISPLAY_ORIENTATION:
+            if( is_reading )
+            {
+                s->sei_do = (sei_display_orientation_t*)calloc( 1, sizeof(sei_display_orientation_t) );
+            }
+            structure(sei_display_orientation)( h, b );
             break;
         default:
             if( is_reading )
@@ -268,7 +294,9 @@ void structure(sei_payload)( h264_stream_t* h, bs_t* b )
             }
             
             for ( i = 0; i < s->payloadSize; i++ )
+            {
                 value( s->data[i], u8 );
+            }
     }
     
     //if( is_reading )

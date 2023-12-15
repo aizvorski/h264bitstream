@@ -72,6 +72,7 @@ void read_sei_end_bits(h264_stream_t* h, bs_t* b )
 
 
 void read_sei_scalability_info( h264_stream_t* h, bs_t* b );
+void read_sei_display_orientation( h264_stream_t* h, bs_t* b );
 void read_sei_payload( h264_stream_t* h, bs_t* b );
 
 
@@ -248,6 +249,25 @@ void read_sei_scalability_info( h264_stream_t* h, bs_t* b )
 
 }
 
+
+// Appendix D.1.27 Display Orientation SEI message syntax
+void read_sei_display_orientation( h264_stream_t* h, bs_t* b )
+{
+    sei_display_orientation_t* sei_do = h->sei->sei_do;
+
+    sei_do->cancel = bs_read_u1(b);
+
+    if( !sei_do->cancel )
+    {
+        sei_do->hor_flip = bs_read_u1(b);
+        sei_do->ver_flip = bs_read_u1(b);
+        sei_do->anticlockwise_rotation = bs_read_u(b, 16);
+        sei_do->display_orientation_repetition_period = bs_read_ue(b);
+        sei_do->display_orientation_extension_flag = bs_read_u1(b);
+    }
+
+}
+
 // D.1 SEI payload syntax
 void read_sei_payload( h264_stream_t* h, bs_t* b )
 {
@@ -263,6 +283,13 @@ void read_sei_payload( h264_stream_t* h, bs_t* b )
             }
             read_sei_scalability_info( h, b );
             break;
+        case SEI_TYPE_DISPLAY_ORIENTATION:
+            if( 1 )
+            {
+                s->sei_do = (sei_display_orientation_t*)calloc( 1, sizeof(sei_display_orientation_t) );
+            }
+            read_sei_display_orientation( h, b );
+            break;
         default:
             if( 1 )
             {
@@ -270,7 +297,9 @@ void read_sei_payload( h264_stream_t* h, bs_t* b )
             }
             
             for ( i = 0; i < s->payloadSize; i++ )
+            {
                 s->data[i] = bs_read_u8(b);
+            }
     }
     
     //if( 1 )
@@ -279,6 +308,7 @@ void read_sei_payload( h264_stream_t* h, bs_t* b )
 
 
 void write_sei_scalability_info( h264_stream_t* h, bs_t* b );
+void write_sei_display_orientation( h264_stream_t* h, bs_t* b );
 void write_sei_payload( h264_stream_t* h, bs_t* b );
 
 
@@ -455,6 +485,25 @@ void write_sei_scalability_info( h264_stream_t* h, bs_t* b )
 
 }
 
+
+// Appendix D.1.27 Display Orientation SEI message syntax
+void write_sei_display_orientation( h264_stream_t* h, bs_t* b )
+{
+    sei_display_orientation_t* sei_do = h->sei->sei_do;
+
+    bs_write_u1(b, sei_do->cancel);
+
+    if( !sei_do->cancel )
+    {
+        bs_write_u1(b, sei_do->hor_flip);
+        bs_write_u1(b, sei_do->ver_flip);
+        bs_write_u(b, 16, sei_do->anticlockwise_rotation);
+        bs_write_ue(b, sei_do->display_orientation_repetition_period);
+        bs_write_u1(b, sei_do->display_orientation_extension_flag);
+    }
+
+}
+
 // D.1 SEI payload syntax
 void write_sei_payload( h264_stream_t* h, bs_t* b )
 {
@@ -470,6 +519,13 @@ void write_sei_payload( h264_stream_t* h, bs_t* b )
             }
             write_sei_scalability_info( h, b );
             break;
+        case SEI_TYPE_DISPLAY_ORIENTATION:
+            if( 0 )
+            {
+                s->sei_do = (sei_display_orientation_t*)calloc( 1, sizeof(sei_display_orientation_t) );
+            }
+            write_sei_display_orientation( h, b );
+            break;
         default:
             if( 0 )
             {
@@ -477,7 +533,9 @@ void write_sei_payload( h264_stream_t* h, bs_t* b )
             }
             
             for ( i = 0; i < s->payloadSize; i++ )
+            {
                 bs_write_u8(b, s->data[i]);
+            }
     }
     
     //if( 0 )
@@ -486,6 +544,7 @@ void write_sei_payload( h264_stream_t* h, bs_t* b )
 
 
 void read_debug_sei_scalability_info( h264_stream_t* h, bs_t* b );
+void read_debug_sei_display_orientation( h264_stream_t* h, bs_t* b );
 void read_debug_sei_payload( h264_stream_t* h, bs_t* b );
 
 
@@ -662,6 +721,25 @@ void read_debug_sei_scalability_info( h264_stream_t* h, bs_t* b )
 
 }
 
+
+// Appendix D.1.27 Display Orientation SEI message syntax
+void read_debug_sei_display_orientation( h264_stream_t* h, bs_t* b )
+{
+    sei_display_orientation_t* sei_do = h->sei->sei_do;
+
+    printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sei_do->cancel = bs_read_u1(b); printf("sei_do->cancel: %d \n", sei_do->cancel); 
+
+    if( !sei_do->cancel )
+    {
+        printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sei_do->hor_flip = bs_read_u1(b); printf("sei_do->hor_flip: %d \n", sei_do->hor_flip); 
+        printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sei_do->ver_flip = bs_read_u1(b); printf("sei_do->ver_flip: %d \n", sei_do->ver_flip); 
+        printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sei_do->anticlockwise_rotation = bs_read_u(b, 16); printf("sei_do->anticlockwise_rotation: %d \n", sei_do->anticlockwise_rotation); 
+        printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sei_do->display_orientation_repetition_period = bs_read_ue(b); printf("sei_do->display_orientation_repetition_period: %d \n", sei_do->display_orientation_repetition_period); 
+        printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); sei_do->display_orientation_extension_flag = bs_read_u1(b); printf("sei_do->display_orientation_extension_flag: %d \n", sei_do->display_orientation_extension_flag); 
+    }
+
+}
+
 // D.1 SEI payload syntax
 void read_debug_sei_payload( h264_stream_t* h, bs_t* b )
 {
@@ -677,6 +755,13 @@ void read_debug_sei_payload( h264_stream_t* h, bs_t* b )
             }
             read_debug_sei_scalability_info( h, b );
             break;
+        case SEI_TYPE_DISPLAY_ORIENTATION:
+            if( 1 )
+            {
+                s->sei_do = (sei_display_orientation_t*)calloc( 1, sizeof(sei_display_orientation_t) );
+            }
+            read_debug_sei_display_orientation( h, b );
+            break;
         default:
             if( 1 )
             {
@@ -685,9 +770,7 @@ void read_debug_sei_payload( h264_stream_t* h, bs_t* b )
             
             for ( i = 0; i < s->payloadSize; i++ )
             {
-                printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left);
-                s->data[i] = bs_read_u8(b);
-                printf("s->data[i]: %d \n", s->data[i]); 
+                printf("%ld.%d: ", (long int)(b->p - b->start), b->bits_left); s->data[i] = bs_read_u8(b); printf("s->data[i]: %d \n", s->data[i]); 
             }
     }
     
