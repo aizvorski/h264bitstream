@@ -48,7 +48,7 @@ int read_avcc(avcc_t* avcc, h264_stream_t* h, bs_t* b)
   }
 
   avcc->numOfPictureParameterSets = bs_read_u(b, 8);
-  avcc->pps_table = (pps_t**)calloc(avcc->numOfSequenceParameterSets, sizeof(pps_t*));
+  avcc->pps_table = (pps_t**)calloc(avcc->numOfPictureParameterSets, sizeof(pps_t*));
   for (int i = 0; i < avcc->numOfPictureParameterSets; i++)
   {
     int pictureParameterSetLength = bs_read_u(b, 16);
